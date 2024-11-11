@@ -1,0 +1,6 @@
+{
+  // Необходимо переименовать данный файл => connection_strings.json и указать правильную строку подключения к бд
+  "ConnectionStrings": {
+    "TestTaskDatabase": "Host=ip:port;Database=TestTask;Username=login;Password=pass"
+  }
+}

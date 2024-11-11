@@ -1,0 +1,64 @@
+﻿@{
+	ViewData["Title"] = "Поиск";
+}
+
+<div class="container mt-5">
+	<div class="row justify-content-center">
+		<div class="col-md-6">
+			<div class="card shadow-sm">
+				<div class="card-body">
+					<h2 class="card-title text-center mb-4">Поиск названий стихов и их авторов</h2>
+
+					<div class="form-group position-relative">
+						<div class="input-group">
+							<input type="text"
+								   id="searchBox"
+								   class="form-control form-control-lg"
+								   placeholder="Начните вводить текст..."
+								   autocomplete="off">
+						</div>
+						<div id="suggestions" class="dropdown-menu w-100">
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+@section Scripts {
+	<script>
+		document.getElementById("searchBox").addEventListener("input", function () {
+			let query = this.value;
+			let suggestionsBox = document.getElementById("suggestions");
+
+			if (query.length === 0) {
+				suggestionsBox.classList.remove("show");
+				suggestionsBox.innerHTML = "";
+				return;
+			}
+
+			fetch(`/api/poems?query=${encodeURIComponent(query)}`)
+				.then(response => response.json())
+				.then(data => {
+					suggestionsBox.innerHTML = "";
+
+					if (data.length > 0) {
+						suggestionsBox.classList.add("show");
+						data.forEach(item => {
+							let div = document.createElement("button");
+							div.textContent = item;
+							div.className = "dropdown-item";
+							div.onclick = () => {
+								document.getElementById("searchBox").value = item;
+								suggestionsBox.classList.remove("show");
+							};
+							suggestionsBox.appendChild(div);
+						});
+					} else {
+						suggestionsBox.classList.remove("show");
+					}
+				});
+		});
+	</script>
+}
