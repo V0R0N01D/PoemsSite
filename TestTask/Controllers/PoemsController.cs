@@ -24,7 +24,14 @@ public class PoemsController : ControllerBase
 		var result = await _dbContext.Poems
 			.Where(poem =>
 				poem.Searchvector!.Matches(EF.Functions.PlainToTsQuery("russian", query)))
-			.Select(poem => $"{poem.Title} - {poem.Author.Name}")
+			.Select(poem => new
+			{
+				title = $"{poem.Title} - {poem.Author.Name}",
+				rank = poem.Searchvector!.Rank(EF.Functions.PlainToTsQuery("russian", query))
+			})
+			.Where(poem => poem.rank >= 0.3)
+			.OrderByDescending(poem => poem.rank)
+			.Select(poem => poem.title)
 			.ToListAsync();
 
 		return result;
