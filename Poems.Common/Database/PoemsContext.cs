@@ -1,17 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
-namespace TestTask.Models;
+namespace Poems.Common.Database;
 
-public partial class TestTaskContext : DbContext
+public partial class PoemsContext : DbContext
 {
-    public TestTaskContext(DbContextOptions<TestTaskContext> options)
+	public PoemsContext(DbContextOptions<PoemsContext> options)
         : base(options)
     {
     }
 
-    public virtual DbSet<Author> Authors { get; set; }
+	public virtual DbSet<Author> Authors { get; set; }
 
     public virtual DbSet<Poem> Poems { get; set; }
 

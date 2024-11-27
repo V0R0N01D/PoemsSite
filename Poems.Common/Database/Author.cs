@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace TestTask.Models;
+﻿namespace Poems.Common.Database;
 
 public partial class Author
 {

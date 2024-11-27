@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using NpgsqlTypes;
+﻿using NpgsqlTypes;
 
-namespace TestTask.Models;
+namespace Poems.Common.Database;
 
 public partial class Poem
 {

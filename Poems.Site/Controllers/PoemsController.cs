@@ -1,16 +1,16 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using TestTask.Models;
+using Poems.Common.Database;
 
-namespace TestTask.Controllers;
+namespace Poems.Site.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
 public class PoemsController : ControllerBase
 {
-	private readonly TestTaskContext _dbContext;
+	private readonly PoemsContext _dbContext;
 
-	public PoemsController(TestTaskContext context)
+	public PoemsController(PoemsContext context)
 	{
 		_dbContext = context;
 	}
