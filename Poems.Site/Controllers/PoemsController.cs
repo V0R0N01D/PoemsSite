@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Poems.Common.Database;
+using Poems.Site.Interfaces.IServices;
+using Poems.Site.Models.Dtos;
 
 namespace Poems.Site.Controllers;
 
@@ -8,32 +8,18 @@ namespace Poems.Site.Controllers;
 [ApiController]
 public class PoemsController : ControllerBase
 {
-	private readonly PoemsContext _dbContext;
+	private readonly IPoemService _poemService;
 
-	public PoemsController(PoemsContext context)
+	public PoemsController(IPoemService poemService)
 	{
-		_dbContext = context;
+		_poemService = poemService;
 	}
 
 	[HttpGet]
-	public async Task<ActionResult<IEnumerable<string>>> SearchTitleWithAuthor([FromQuery] string query)
+	public async Task<ActionResult<IEnumerable<PoemShortDto>>> SearchPoems([FromQuery] string query)
 	{
-		if (string.IsNullOrWhiteSpace(query))
-			return Ok(new List<string>());
+		var poems = await _poemService.SearchPoemsAsync(query);
 
-		var result = await _dbContext.Poems
-			.Where(poem =>
-				poem.Searchvector!.Matches(EF.Functions.PlainToTsQuery("russian", query)))
-			.Select(poem => new
-			{
-				title = $"{poem.Title} - {poem.Author.Name}",
-				rank = poem.Searchvector!.Rank(EF.Functions.PlainToTsQuery("russian", query))
-			})
-			.Where(poem => poem.rank >= 0.3)
-			.OrderByDescending(poem => poem.rank)
-			.Select(poem => poem.title)
-			.ToListAsync();
-
-		return result;
+		return Ok(poems);
 	}
 }

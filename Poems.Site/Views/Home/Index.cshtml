@@ -2,22 +2,30 @@
 	ViewData["Title"] = "Поиск";
 }
 
-<div class="container mt-5">
+<div class="container py-5">
 	<div class="row justify-content-center">
-		<div class="col-md-6">
-			<div class="card shadow-sm">
-				<div class="card-body">
-					<h2 class="card-title text-center mb-4">Поиск названий стихотворений и их авторов</h2>
+		<div class="col-md-8">
+			<div class="card shadow">
+				<div class="card-body p-4">
+					<div class="d-flex justify-content-center align-items-center mb-4">
+						<h2 class="mb-0">Поиск стихотворений</h2>
+						<span class="ms-2 help-icon"
+							  data-bs-toggle="tooltip"
+							  data-bs-placement="top"
+							  title="Поиск осуществляется по названию и тексту произведения">?</span>
+					</div>
 
-					<div class="form-group position-relative">
-						<div class="input-group">
+					<div class="search-container">
+						<div class="position-relative">
 							<input type="text"
 								   id="searchBox"
 								   class="form-control form-control-lg"
-								   placeholder="Начните вводить текст..."
+								   placeholder="Введите название или автора..."
 								   autocomplete="off">
 						</div>
-						<div id="suggestions" class="dropdown-menu w-100">
+						<div id="suggestions"
+							 class="dropdown-menu w-100"
+							 style="max-height: 300px; overflow-y: auto;">
 						</div>
 					</div>
 				</div>
@@ -27,38 +35,10 @@
 </div>
 
 @section Scripts {
+	<script src="~/js/search.js"></script>
 	<script>
-		document.getElementById("searchBox").addEventListener("input", function () {
-			let query = this.value;
-			let suggestionsBox = document.getElementById("suggestions");
-
-			if (query.length === 0) {
-				suggestionsBox.classList.remove("show");
-				suggestionsBox.innerHTML = "";
-				return;
-			}
-
-			fetch(`/api/poems?query=${encodeURIComponent(query)}`)
-				.then(response => response.json())
-				.then(data => {
-					suggestionsBox.innerHTML = "";
-
-					if (data.length > 0) {
-						suggestionsBox.classList.add("show");
-						data.forEach(item => {
-							let div = document.createElement("button");
-							div.textContent = item;
-							div.className = "dropdown-item";
-							div.onclick = () => {
-								document.getElementById("searchBox").value = item;
-								suggestionsBox.classList.remove("show");
-							};
-							suggestionsBox.appendChild(div);
-						});
-					} else {
-						suggestionsBox.classList.remove("show");
-					}
-				});
+		document.addEventListener('DOMContentLoaded', () => {
+			new PoemSearch();
 		});
 	</script>
 }

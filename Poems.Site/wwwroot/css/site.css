@@ -27,10 +27,70 @@ body {
 }
 
 .dropdown-item {
-    white-space: normal;
-    word-wrap: break-word;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
 }
 
     .dropdown-item:hover {
         background-color: #f8f9fa;
+    }
+
+.suggestion-title {
+    font-weight: 500;
+}
+
+.suggestion-author {
+    font-size: 0.875rem;
+}
+
+.search-container {
+    position: relative;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.dropdown-menu {
+    border-radius: 0.25rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    margin-top: 0.5rem;
+}
+
+.suggestion-item {
+    padding: 0.75rem 1rem;
+    transition: background-color 0.2s ease;
+}
+
+.loading-indicator {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.help-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    color: #6c757d;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: help;
+    transition: all 0.2s ease;
+}
+
+    .help-icon:hover {
+        background-color: #dee2e6;
+        color: #495057;
     }

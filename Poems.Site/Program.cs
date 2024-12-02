@@ -1,5 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Poems.Common.Database;
+using Poems.Site.Interfaces.IRepository;
+using Poems.Site.Interfaces.IServices;
+using Poems.Site.Repositories;
+using Poems.Site.Services;
 
 namespace Poems.Site;
 
@@ -13,6 +17,9 @@ public class Program
 
 		builder.Services.AddDbContext<PoemsContext>(options =>
 			options.UseNpgsql(builder.Configuration.GetConnectionString("PoemsDatabase")));
+
+		builder.Services.AddScoped<IPoemRepository, PoemRepository>();
+		builder.Services.AddScoped<IPoemService, PoemService>();
 
 		builder.Services.AddControllersWithViews();
 
