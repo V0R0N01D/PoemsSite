@@ -7,35 +7,49 @@ namespace Poems.Site.Repositories;
 
 public class PoemRepository : IPoemRepository
 {
-	private readonly PoemsContext _dbContext;
+    private readonly PoemsContext _dbContext;
 
-	public PoemRepository(PoemsContext dbContext)
-	{
-		_dbContext = dbContext;
-	}
+    public PoemRepository(PoemsContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
 
-	public async Task<IEnumerable<PoemShortDto>> SearchPoemsAsync(string query, int maxCount,
-		float minimalRank, CancellationToken cancellationToken)
-	{
-		return await _dbContext.Poems
-			.Where(poem =>
-				poem.Searchvector!.Matches(EF.Functions.PlainToTsQuery("russian", query)))
-			.Select(poem => new
-			{
-				Id = poem.Id,
-				Title = poem.Title,
-				AuthorName = poem.Author.Name,
-				Rank = poem.Searchvector!.Rank(EF.Functions.PlainToTsQuery("russian", query))
-			})
-			.Where(poem => poem.Rank >= minimalRank)
-			.OrderByDescending(poem => poem.Rank)
-			.Take(maxCount)
-			.Select(poem => new PoemShortDto
-			{
-				Id = poem.Id,
-				AuthorName = poem.AuthorName,
-				Title = poem.Title,
-			})
-			.ToArrayAsync(cancellationToken);
-	}
+    public async Task<PoemFullDto?> GetPoemByIdAsync(int id,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Poems.Where(poem => poem.Id == id)
+            .Select(poem => new PoemFullDto
+            {
+                Id = id,
+                Title = poem.Title,
+                AuthorName = poem.Author.Name,
+                Content = poem.Content
+            }).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IList<PoemShortDto>?> SearchPoemsAsync(
+        string query, int maxCount, float minimalRank, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Poems
+            .Where(poem => poem.Searchvector!.Matches(
+                EF.Functions.PlainToTsQuery("russian", query)))
+            .Select(poem => new
+            {
+                Id = poem.Id,
+                Title = poem.Title,
+                AuthorName = poem.Author.Name,
+                Rank = poem.Searchvector!.Rank(
+                    EF.Functions.PlainToTsQuery("russian", query))
+            })
+            .Where(poem => poem.Rank >= minimalRank)
+            .OrderByDescending(poem => poem.Rank)
+            .Take(maxCount)
+            .Select(poem => new PoemShortDto
+            {
+                Id = poem.Id,
+                AuthorName = poem.AuthorName,
+                Title = poem.Title,
+            })
+            .ToArrayAsync(cancellationToken);
+    }
 }
