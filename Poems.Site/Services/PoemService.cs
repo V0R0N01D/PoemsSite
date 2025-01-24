@@ -39,7 +39,7 @@ internal class PoemService : IPoemService
 
         var poems = await _poemRepository
             .SearchPoemsAsync(query, maxCount, minimalRank, cancellationToken);
-
+        
         return poems is null
             ? Result<IEnumerable<PoemShortDto>>.Failure("Poems not found.")
             : Result<IEnumerable<PoemShortDto>>.Success(poems);

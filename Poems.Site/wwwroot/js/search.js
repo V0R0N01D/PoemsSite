@@ -2,6 +2,12 @@
     constructor() {
         this.searchBox = document.getElementById("searchBox");
         this.suggestionsBox = document.getElementById("suggestions");
+
+        this.poemContainer = document.getElementById('poemContainer');
+        this.poemTitle = document.getElementById('poemTitle');
+        this.poemAuthor = document.getElementById('poemAuthor');
+        this.poemContent = document.getElementById('poemContent');
+        
         this.initializeEventListeners();
     }
 
@@ -10,7 +16,7 @@
             clearTimeout(this.searchTimeout);
             this.searchTimeout = setTimeout(() => this.handleSearch(), 300);
         });
-
+        
         this.searchBox.addEventListener("focus", () => {
             if (this.searchBox.value.trim()) {
                 this.handleSearch();
@@ -64,8 +70,28 @@
     }
 
     selectSuggestion(item) {
-        this.searchBox.value = `${item.title} - ${item.author_name}`;
+        this.loadPoemById(item.id);
         this.hideSuggestions();
+    }
+
+    loadPoemById(id) {
+        fetch(`/api/Poems/${id}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Стихотворение не найдено');
+                }
+                return response.json();
+            })
+            .then(poem => {
+                this.poemTitle.textContent = poem.title;
+                this.poemAuthor.textContent = `Автор: ${poem.author_name}`;
+                this.poemContent.textContent = poem.content;
+
+                this.poemContainer.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Ошибка при загрузке стихотворения:', error);
+            });
     }
 
     showNoResults() {
