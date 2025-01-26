@@ -1,4 +1,7 @@
-﻿class PoemSearch {
+﻿import {ToastService} from "./toast.js";
+import {ApiService} from "./apiService.js";
+
+export class PoemSearch {
     constructor() {
         this.searchBox = document.getElementById("searchBox");
         this.suggestionsBox = document.getElementById("suggestions");
@@ -7,119 +10,124 @@
         this.poemTitle = document.getElementById('poemTitle');
         this.poemAuthor = document.getElementById('poemAuthor');
         this.poemContent = document.getElementById('poemContent');
-        
+
+
+        this.toastService = new ToastService();
+        this.apiService = new ApiService();
+
         this.initializeEventListeners();
     }
 
     initializeEventListeners() {
         this.searchBox.addEventListener("input", () => {
             clearTimeout(this.searchTimeout);
-            this.searchTimeout = setTimeout(() => this.handleSearch(), 300);
+            this.searchTimeout = setTimeout(() => this.handleSearch(), 500);
         });
-        
+
         this.searchBox.addEventListener("focus", () => {
             if (this.searchBox.value.trim()) {
-                this.handleSearch();
+                this.showSuggestions();
             }
         });
+        document.addEventListener("click",
+            (e) => this.handleClickOutside(e));
 
-        document.addEventListener("click", (e) => this.handleClickOutside(e));
+        this.suggestionsBox.addEventListener("click",
+            (e) => this.handleSelectPoem(e));
+    }
 
-        const tooltipTriggerList = [].slice.call(
-            document.querySelectorAll('[data-bs-toggle="tooltip"]')
-                .forEach(el => new bootstrap.Tooltip(el)));
+    handleClickOutside(e) {
+        if (!this.searchBox.contains(e.target)
+            && !this.suggestionsBox.contains(e.target)) {
+            this.hideSuggestions();
+        }
     }
 
     async handleSearch() {
         const query = this.searchBox.value.trim();
-
         if (!query) {
             this.hideSuggestions();
             return;
         }
-
-        try {
-            const response = await fetch(`/api/poems?query=${encodeURIComponent(query)}`);
-            const data = await response.json();
-            this.updateSuggestions(data);
-        } catch (error) {
-            this.showError();
+        
+        const result = await this.apiService.searchPoemsInDb(query);
+        if (!result.success) {
+            this.showSearchError(result.error);
+            return;
         }
+
+        this.updateSuggestions(result.result);
     }
+    
+    async handleSelectPoem(event) {
+        const button = event.target.closest("button.dropdown-item");
+        const poemId = button.dataset.poemId;
 
-    updateSuggestions(data) {
-        this.suggestionsBox.innerHTML = "";
+        const result = await this.apiService.getPoemById(poemId);
 
-        if (data.length > 0) {
-            this.suggestionsBox.classList.add("show");
-            data.forEach(item => this.addSuggestion(item));
-        } else {
-            this.showNoResults();
+        if (!result.success) {
+            this.toastService.showError(result.error)
+            return;
         }
-    }
 
-    addSuggestion(item) {
-        const button = document.createElement("button");
-        button.className = "dropdown-item py-2 px-3";
-        button.innerHTML = `
-            <div class="suggestion-title">${item.title}</div>
-            <div class="suggestion-author text-muted">${item.author_name}</div>
-        `;
-        button.onclick = () => this.selectSuggestion(item);
-        this.suggestionsBox.appendChild(button);
-    }
-
-    selectSuggestion(item) {
-        this.loadPoemById(item.id);
+        this.setPoemDataInBox(result.result);
         this.hideSuggestions();
     }
 
-    loadPoemById(id) {
-        fetch(`/api/Poems/${id}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Стихотворение не найдено');
-                }
-                return response.json();
-            })
-            .then(poem => {
-                this.poemTitle.textContent = poem.title;
-                this.poemAuthor.textContent = `Автор: ${poem.author_name}`;
-                this.poemContent.textContent = poem.content;
+    updateSuggestions(poems) {
+        this.suggestionsBox.innerHTML = "";
 
-                this.poemContainer.style.display = 'block';
-            })
-            .catch(error => {
-                console.error('Ошибка при загрузке стихотворения:', error);
-            });
+        if (poems.length > 0) {
+            this.showSuggestions();
+            poems.forEach(poem => this.addSuggestion(poem));
+        } else {
+            this.showSearchNoResults();
+        }
     }
 
-    showNoResults() {
-        this.suggestionsBox.classList.add("show");
+    addSuggestion(poem) {
+        const button = document.createElement("button");
+        button.className = "dropdown-item";
+        button.innerHTML = `
+            <div class="suggestion-title">${poem.title}</div>
+            <div class="suggestion-author text-muted">${poem.author_name}</div>
+        `;
+        button.dataset.poemId = poem.id;
+        this.suggestionsBox.appendChild(button);
+    }
+
+    setPoemDataInBox(poem) {
+        this.poemTitle.textContent = poem.title;
+        this.poemAuthor.textContent = `Автор: ${poem.author_name}`;
+        this.poemContent.textContent = poem.content;
+
+        this.poemContainer.style.display = 'block';
+    }
+
+    
+    showSearchNoResults() {
+        this.showSuggestions();
         this.suggestionsBox.innerHTML = `
             <div class="dropdown-item text-muted text-center py-2">
-                Ничего не найдено
+                Ничего не найдено.
             </div>
         `;
     }
 
-    showError() {
-        this.suggestionsBox.classList.add("show");
+    showSearchError(message) {
+        this.showSuggestions();
         this.suggestionsBox.innerHTML = `
             <div class="dropdown-item text-danger text-center py-2">
-                Произошла ошибка при поиске
+                ${message}
             </div>
         `;
+    }
+
+    showSuggestions() {
+        this.suggestionsBox.classList.add("show");
     }
 
     hideSuggestions() {
         this.suggestionsBox.classList.remove("show");
-        this.suggestionsBox.innerHTML = "";
-    }
-
-    handleClickOutside(e) {
-        if (!this.searchBox.contains(e.target) && !this.suggestionsBox.contains(e.target)) {
-            this.hideSuggestions();
-        }
     }
 }

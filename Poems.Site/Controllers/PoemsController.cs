@@ -20,7 +20,7 @@ public class PoemsController : ControllerBase
     public async Task<ActionResult<PoemFullDto>> GetPoemById(int id)
     {
         var poemResult = await _poemService.GetPoemByIdAsync(id);
-
+        
         return poemResult.ToActionResult();
     }
 

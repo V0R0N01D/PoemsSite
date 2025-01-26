@@ -10,9 +10,9 @@
 					<div class="d-flex justify-content-center align-items-center mb-4">
 						<h2 class="mb-0">Поиск стихотворений</h2>
 						<span class="ms-2 help-icon"
-							  data-bs-toggle="tooltip"
-							  data-bs-placement="top"
-							  title="Поиск осуществляется по названию и тексту произведения">?</span>
+						      data-bs-toggle="tooltip"
+						      data-bs-placement="top"
+						      title="Поиск осуществляется по названию и тексту произведения">?</span>
 					</div>
 
 					<div class="search-container">
@@ -20,7 +20,7 @@
 							<input type="text"
 							       id="searchBox"
 							       class="form-control form-control-lg"
-							       placeholder="Введите название или автора..."
+							       placeholder="Введите название или текст произведения..."
 							       autocomplete="off">
 						</div>
 						<div id="suggestions"
@@ -36,7 +36,7 @@
 							<div id="poemContent" class="white-space-pre-wrap"></div>
 						</div>
 					</div>
-					
+
 				</div>
 			</div>
 		</div>
@@ -44,8 +44,9 @@
 </div>
 
 @section Scripts {
-	<script src="~/js/search.js"></script>
-	<script>
+	<script type="module">
+		import {PoemSearch} from '/js/search.js';
+
 		document.addEventListener('DOMContentLoaded', () => {
 			new PoemSearch();
 		});

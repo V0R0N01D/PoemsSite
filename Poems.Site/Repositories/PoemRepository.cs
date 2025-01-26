@@ -27,7 +27,7 @@ public class PoemRepository : IPoemRepository
             }).FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<IList<PoemShortDto>?> SearchPoemsAsync(
+    public async Task<IList<PoemShortDto>> SearchPoemsAsync(
         string query, int maxCount, float minimalRank, CancellationToken cancellationToken)
     {
         return await _dbContext.Poems
