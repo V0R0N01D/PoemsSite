@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Poems.Common.Database;
+using Poems.Site.Infrastructure.Interceptors;
 using Poems.Site.Interfaces.IRepository;
 using Poems.Site.Interfaces.IServices;
 using Poems.Site.Repositories;
@@ -15,9 +16,14 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.Configuration.AddJsonFile("connection_strings.json");
 
-        builder.Services.AddDbContext<PoemsContext>(options =>
-            options.UseNpgsql(builder.Configuration.GetConnectionString("PoemsDatabase")));
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddDbContext<PoemsContext>((sp, options) =>
+        {
+            options.UseNpgsql(builder.Configuration.GetConnectionString("PoemsDatabase"));
+            options.AddInterceptors(sp.GetRequiredService<QueryMetricsInterceptor>());
+        });
 
+        builder.Services.AddScoped<QueryMetricsInterceptor>();
         builder.Services.AddScoped<IPoemRepository, PoemRepository>();
         builder.Services.AddScoped<IPoemService, PoemService>();
 

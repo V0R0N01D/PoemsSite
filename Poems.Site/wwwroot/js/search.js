@@ -56,7 +56,7 @@ export class PoemSearch {
             return;
         }
 
-        this.updateSuggestions(result.result);
+        this.updateSuggestions(result.result.poems);
     }
     
     async handleSelectPoem(event) {
@@ -76,7 +76,7 @@ export class PoemSearch {
 
     updateSuggestions(poems) {
         this.suggestionsBox.innerHTML = "";
-
+        
         if (poems.length > 0) {
             this.showSuggestions();
             poems.forEach(poem => this.addSuggestion(poem));
@@ -98,7 +98,7 @@ export class PoemSearch {
 
     setPoemDataInBox(poem) {
         this.poemTitle.textContent = poem.title;
-        this.poemAuthor.textContent = `Автор: ${poem.author_name}`;
+        this.poemAuthor.textContent = `Автор: ${poem.authorName}`;
         this.poemContent.textContent = poem.content;
 
         this.poemContainer.style.display = 'block';

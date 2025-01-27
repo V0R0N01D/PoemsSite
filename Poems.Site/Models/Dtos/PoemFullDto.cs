@@ -7,7 +7,7 @@ public class PoemFullDto
 	[JsonPropertyName("id")]
 	public int Id { get; set; }
 
-	[JsonPropertyName("author_name")]
+	[JsonPropertyName("authorName")]
 	public required string AuthorName { get; set; }
 
 	[JsonPropertyName("title")]

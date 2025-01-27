@@ -20,16 +20,14 @@ public class PoemsController : ControllerBase
     public async Task<ActionResult<PoemFullDto>> GetPoemById(int id)
     {
         var poemResult = await _poemService.GetPoemByIdAsync(id);
-        
         return poemResult.ToActionResult();
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<PoemShortDto>>> SearchPoems(
+    public async Task<ActionResult<SearchResultDto>> SearchPoems(
         [FromQuery] string query)
     {
         var poemsResult = await _poemService.SearchPoemsAsync(query);
-
         return poemsResult.ToActionResult();
     }
 }
