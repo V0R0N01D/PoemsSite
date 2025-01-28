@@ -5,6 +5,7 @@ export class PoemSearch {
     constructor() {
         this.searchBox = document.getElementById("searchBox");
         this.suggestionsBox = document.getElementById("suggestions");
+        this.queryTime = document.getElementById('queryTime');
 
         this.poemContainer = document.getElementById('poemContainer');
         this.poemTitle = document.getElementById('poemTitle');
@@ -49,16 +50,17 @@ export class PoemSearch {
             this.hideSuggestions();
             return;
         }
-        
+
         const result = await this.apiService.searchPoemsInDb(query);
         if (!result.success) {
             this.showSearchError(result.error);
             return;
         }
 
+        this.showSearchStatus(result.result);
         this.updateSuggestions(result.result.poems);
     }
-    
+
     async handleSelectPoem(event) {
         const button = event.target.closest("button.dropdown-item");
         const poemId = button.dataset.poemId;
@@ -74,9 +76,14 @@ export class PoemSearch {
         this.hideSuggestions();
     }
 
+
+    showSearchStatus(result) {
+        this.queryTime.textContent = result.queryTimeMs;
+    }
+
     updateSuggestions(poems) {
         this.suggestionsBox.innerHTML = "";
-        
+
         if (poems.length > 0) {
             this.showSuggestions();
             poems.forEach(poem => this.addSuggestion(poem));
@@ -104,7 +111,7 @@ export class PoemSearch {
         this.poemContainer.style.display = 'block';
     }
 
-    
+
     showSearchNoResults() {
         this.showSuggestions();
         this.suggestionsBox.innerHTML = `
