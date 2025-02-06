@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace Poems.Common.Database;
+namespace Poems.Common.Models.Database;
 
 public partial class PoemsContext : DbContext
 {

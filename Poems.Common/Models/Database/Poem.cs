@@ -1,6 +1,6 @@
 ﻿using NpgsqlTypes;
 
-namespace Poems.Common.Database;
+namespace Poems.Common.Models.Database;
 
 public partial class Poem
 {
