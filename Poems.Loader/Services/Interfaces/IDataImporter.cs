@@ -11,5 +11,5 @@ public interface IDataImporter<T>
 	/// <param name="records">The records to import.</param>
 	/// <param name="stoppingToken">Cancellation token to stop the operation.</param>
 	/// <returns>A task representing the asynchronous operation.</returns>
-	Task ImportRecordsAsync(IEnumerable<T> records, CancellationToken stoppingToken);
+	Task ImportRecordsAsync(IEnumerable<T> records, CancellationToken stoppingToken = default);
 }
