@@ -12,4 +12,9 @@ public class PoemShortDto
 
 	[JsonPropertyName("title")]
 	public required string Title { get; set; }
+	
+	[JsonPropertyName("rank")]
+	public required double Rank { get; set; }
+	
+	
 }

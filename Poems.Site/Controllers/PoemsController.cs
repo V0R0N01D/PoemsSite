@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Poems.Site.Interfaces.IServices;
+using Poems.Site.Interfaces.Services;
 using Poems.Site.Models;
 using Poems.Site.Models.Dtos;
 
@@ -24,10 +24,10 @@ public class PoemsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<SearchResultDto>> SearchPoems(
+    public async Task<ActionResult<SearchResultDto>> DbSearchPoems(
         [FromQuery] string query)
     {
-        var poemsResult = await _poemService.SearchPoemsAsync(query);
+        var poemsResult = await _poemService.DbSearchPoemsAsync(query);
         return poemsResult.ToActionResult();
     }
 }
