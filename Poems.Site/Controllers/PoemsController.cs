@@ -7,27 +7,28 @@ namespace Poems.Site.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class PoemsController : ControllerBase
+public class PoemsController(IPoemService poemService) : ControllerBase
 {
-    private readonly IPoemService _poemService;
-
-    public PoemsController(IPoemService poemService)
-    {
-        _poemService = poemService;
-    }
-
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PoemFullDto>> GetPoemById(int id)
     {
-        var poemResult = await _poemService.GetPoemByIdAsync(id);
+        var poemResult = await poemService.GetPoemByIdAsync(id);
         return poemResult.ToActionResult();
     }
 
-    [HttpGet]
+    [HttpGet("search/db")]
     public async Task<ActionResult<SearchResultDto>> DbSearchPoems(
         [FromQuery] string query)
     {
-        var poemsResult = await _poemService.DbSearchPoemsAsync(query);
+        var poemsResult = await poemService.DbSearchPoemsAsync(query);
+        return poemsResult.ToActionResult();
+    }
+    
+    [HttpGet("search/elastic")]
+    public async Task<ActionResult<SearchResultDto>> ElasticSearchPoems(
+        [FromQuery] string query)
+    {
+        var poemsResult = await poemService.ElasticSearchPoemsAsync(query);
         return poemsResult.ToActionResult();
     }
 }

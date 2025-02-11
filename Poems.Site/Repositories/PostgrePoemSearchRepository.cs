@@ -7,10 +7,12 @@ namespace Poems.Site.Repositories;
 
 public class PostgrePoemSearchRepository(
     PoemsContext dbContext,
-    IHttpContextAccessor httpContextAccessor) : IPoemSearchRepository
+    IHttpContextAccessor httpContextAccessor)
+    : IPoemSearchRepository
 {
     public async Task<SearchResultDto> SearchPoemsAsync(
-        string query, int maxCount, float minimalRank, CancellationToken cancellationToken)
+        string query, int maxCount, float minimalRank,
+        CancellationToken cancellationToken)
     {
         var poems = await dbContext.Poems
             .Where(poem => poem.Searchvector!.Matches(

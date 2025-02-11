@@ -26,5 +26,5 @@ public class PoemWithAuthor
     /// <summary>
     /// Text content of the poem.
     /// </summary>
-    public required string Text { get; set; }
+    public string Text { get; set; }
 }

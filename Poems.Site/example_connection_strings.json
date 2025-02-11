@@ -2,5 +2,13 @@
   // Необходимо переименовать данный файл => connection_strings.json и указать правильную строку подключения к бд
   "ConnectionStrings": {
     "PoemsDatabase": "Host=ip:port;Database=Poems.Site;Username=login;Password=pass"
+  },
+  "ExternalServices": {
+    "ElasticSearch": {
+      "Url": "https://localhost:9200",
+      "Fingerprint": "fingerprint",
+      "ApiKey": "apikey",
+      "IndexTitle": "poems"
+    }
   }
 }

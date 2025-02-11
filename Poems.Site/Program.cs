@@ -31,8 +31,28 @@ public class Program
         builder.Services.AddScoped<QueryMetricsInterceptor>();
 
         #endregion
-        
-        builder.Services.AddKeyedScoped<IPoemSearchRepository, PostgrePoemSearchRepository>("postgre");
+
+        #region Elasticsearch
+
+        var elasticConfiguration = builder.Configuration
+            .GetRequiredSection("ExternalServices")
+            .GetRequiredSection("ElasticSearch")
+            .Get<ElasticsearchConfiguration>()!;
+        builder.Services.AddSingleton(elasticConfiguration);
+
+        builder.Services.AddSingleton<ElasticsearchClient>(_
+            => new ElasticsearchClient(new ElasticsearchClientSettings(
+                    new Uri(elasticConfiguration.Url))
+                .CertificateFingerprint(elasticConfiguration.Fingerprint)
+                .Authentication(new ApiKey(elasticConfiguration.ApiKey))));
+
+        #endregion
+
+
+        builder.Services
+            .AddKeyedScoped<IPoemSearchRepository, PostgrePoemSearchRepository>("postgre");
+        builder.Services
+            .AddKeyedScoped<IPoemSearchRepository, ElasticPoemSearchRepository>("elastic");
         builder.Services.AddScoped<IPoemRepository, PoemRepository>();
         builder.Services.AddScoped<IPoemService, PoemService>();
 
