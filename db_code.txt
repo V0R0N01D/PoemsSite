@@ -21,17 +21,27 @@ SET row_security = off;
 -- Name: poems_search_vector_update(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.generate_search_vector(title text, content text) RETURNS tsvector AS $$
+CREATE FUNCTION public.generate_search_vector(author text, title text, content text)
+RETURNS tsvector AS $$
 BEGIN
-    RETURN setweight(to_tsvector('russian', title), 'A') ||
-           setweight(to_tsvector('russian', content), 'B');
+    RETURN setweight(to_tsvector('russian', author), 'A') ||
+           setweight(to_tsvector('russian', title), 'B') ||
+           setweight(to_tsvector('russian', content), 'C');
 END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION public.poems_search_vector_update() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION public.poems_search_vector_update()
+RETURNS trigger AS $$
+DECLARE
+	author_name text;
 BEGIN
-    NEW.searchvector := public.generate_search_vector(NEW.title, NEW.content);
+    SELECT name
+	INTO author_name
+	FROM public.authors
+	WHERE id = NEW.author_id;
+    
+	NEW.searchvector := public.generate_search_vector(author_name, NEW.title, NEW.content);
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -103,4 +113,3 @@ ALTER TABLE ONLY public.poems
 --
 -- PostgreSQL database dump complete
 --
-
