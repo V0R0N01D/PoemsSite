@@ -6,7 +6,7 @@ export class ApiService {
     }
 
     async searchPoemsInDb(query) {
-        const url = `${this.baseURL}poems?query=${encodeURIComponent(query)}`;
+        const url = `${this.baseURL}poems/search/db?query=${encodeURIComponent(query)}`;
         return this.sendRequest(url);
     }
 
