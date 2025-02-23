@@ -2,7 +2,6 @@ using System.Net;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Poems.Common.Models.Configurations;
 using Poems.Common.Models.Database;
 using Poems.Site.Infrastructure.Interceptors;
@@ -18,9 +17,13 @@ public class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        builder.Configuration.AddJsonFile("connection_strings.json");
+        builder.Configuration
+            .AddJsonFile("connection_strings.json", optional: true)
+            .AddEnvironmentVariables();
 
-        #region Postgre
+        var elastisearchEnable = builder.Configuration.GetValue<bool>("ElasticsearchEnabled");
+
+        #region Postgres
 
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddDbContext<PoemsContext>((sp, options) =>
@@ -30,30 +33,42 @@ public class Program
         });
         builder.Services.AddScoped<QueryMetricsInterceptor>();
 
+
+        builder.Services
+            .AddKeyedScoped<IPoemSearchRepository, PostgrePoemSearchRepository>("postgre");
+        builder.Services.AddScoped<IPoemRepository, PoemRepository>();
+
         #endregion
 
         #region Elasticsearch
 
-        var elasticConfiguration = builder.Configuration
-            .GetRequiredSection("ExternalServices")
-            .GetRequiredSection("ElasticSearch")
-            .Get<ElasticsearchConfiguration>()!;
-        builder.Services.AddSingleton(elasticConfiguration);
+        if (elastisearchEnable)
+        {
+            var elasticConfiguration = builder.Configuration
+                .GetRequiredSection("ExternalServices")
+                .GetRequiredSection("ElasticSearch")
+                .Get<ElasticsearchConfiguration>()!;
+            builder.Services.AddSingleton(elasticConfiguration);
 
-        builder.Services.AddSingleton<ElasticsearchClient>(_
-            => new ElasticsearchClient(new ElasticsearchClientSettings(
-                    new Uri(elasticConfiguration.Url))
-                .CertificateFingerprint(elasticConfiguration.Fingerprint)
-                .Authentication(new ApiKey(elasticConfiguration.ApiKey))));
+            builder.Services.AddSingleton<ElasticsearchClient>(_
+                => new ElasticsearchClient(new ElasticsearchClientSettings(
+                        new Uri(elasticConfiguration.Url))
+                    .CertificateFingerprint(elasticConfiguration.Fingerprint)
+                    .Authentication(new ApiKey(elasticConfiguration.ApiKey))));
+
+            builder.Services
+                .AddKeyedScoped<IPoemSearchRepository, ElasticPoemSearchRepository>("elastic");
+        }
+        else
+        {
+            builder.Services
+                .AddKeyedScoped<IPoemSearchRepository, ElasticPoemSearchRepository>(
+                    "elastic", (_, _) => null!);
+        }
 
         #endregion
 
 
-        builder.Services
-            .AddKeyedScoped<IPoemSearchRepository, PostgrePoemSearchRepository>("postgre");
-        builder.Services
-            .AddKeyedScoped<IPoemSearchRepository, ElasticPoemSearchRepository>("elastic");
-        builder.Services.AddScoped<IPoemRepository, PoemRepository>();
         builder.Services.AddScoped<IPoemService, PoemService>();
 
         builder.Services.AddControllersWithViews();

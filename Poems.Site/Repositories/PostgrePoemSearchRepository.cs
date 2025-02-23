@@ -17,7 +17,7 @@ public class PostgrePoemSearchRepository(
         var poems = await dbContext.Poems
             .Where(poem => poem.Searchvector!.Matches(
                 EF.Functions.PlainToTsQuery("russian", query)))
-            .Select(poem => new
+            .Select(poem => new PoemShortDto
             {
                 Id = poem.Id,
                 Title = poem.Title,
@@ -25,16 +25,9 @@ public class PostgrePoemSearchRepository(
                 Rank = poem.Searchvector!.Rank(
                     EF.Functions.PlainToTsQuery("russian", query))
             })
-            .Where(poem => poem.Rank >= minimalRank)
+            //.Where(poem => poem.Rank >= minimalRank)
             .OrderByDescending(poem => poem.Rank)
             .Take(maxCount)
-            .Select(poem => new PoemShortDto
-            {
-                Id = poem.Id,
-                AuthorName = poem.AuthorName,
-                Title = poem.Title,
-                Rank = poem.Rank
-            })
             .ToArrayAsync(cancellationToken);
 
         var httpContext = httpContextAccessor.HttpContext;
