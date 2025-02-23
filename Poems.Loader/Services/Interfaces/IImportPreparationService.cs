@@ -2,5 +2,5 @@ namespace Poems.Loader.Services.Interfaces;
 
 public interface IImportPreparationService
 {
-    Task PrepareDestinationAsync();
+    Task<bool> PrepareDestinationAsync(CancellationToken cancellationToken = default);
 }

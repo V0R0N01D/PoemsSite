@@ -7,16 +7,9 @@ namespace Poems.Loader.Services;
 /// <summary>
 /// Imports poem records into the database.
 /// </summary>
-public class PostgrePoemsImporter : IDataImporter<PoemRecord>
+public class PostgrePoemsImporter(PoemsContext context) : IDataImporter<PoemRecord>
 {
     private readonly Dictionary<string, Author> _cacheAuthors = new();
-    private readonly PoemsContext _context;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PostgrePoemsImporter"/> class.
-    /// </summary>
-    /// <param name="context">The database context.</param>
-    public PostgrePoemsImporter(PoemsContext context) => _context = context;
     
     /// <inheritdoc/>
     public async Task ImportRecordsAsync(IEnumerable<PoemRecord> records,
@@ -32,7 +25,7 @@ public class PostgrePoemsImporter : IDataImporter<PoemRecord>
                 };
 
                 _cacheAuthors.Add(author.Name, author);
-                _context.Authors.Add(author);
+                context.Authors.Add(author);
             }
 
             var poem = new Poem()
@@ -41,9 +34,9 @@ public class PostgrePoemsImporter : IDataImporter<PoemRecord>
                 Content = record.Text,
                 Author = author
             };
-            _context.Poems.Add(poem);
+            context.Poems.Add(poem);
         }
 
-        await _context.SaveChangesAsync(stoppingToken);
+        await context.SaveChangesAsync(stoppingToken);
     }
 }

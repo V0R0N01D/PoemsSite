@@ -10,11 +10,12 @@ public class ElasticsearchImportPreparationService(
     ElasticsearchConfiguration elasticsearchConfiguration)
     : IImportPreparationService
 {
-    public async Task PrepareDestinationAsync()
+    public async Task<bool> PrepareDestinationAsync(CancellationToken cancellationToken = default)
     {
         var indexTitle = elasticsearchConfiguration.IndexTitle;
         await DeleteIndex(indexTitle);
         await CreateIndex(indexTitle);
+        return true;
     }
 
     private async Task CreateIndex(string title)

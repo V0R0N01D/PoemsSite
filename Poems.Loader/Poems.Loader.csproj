@@ -5,23 +5,24 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="connection_strings.json" />
     <None Remove="example_connection_strings.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    <Content Include="..\.dockerignore">
+      <Link>.dockerignore</Link>
     </Content>
-    <Content Include="connection_strings.json">
+    <Content Include="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="connection_strings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="example_connection_strings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
