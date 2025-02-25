@@ -1,0 +1,58 @@
+﻿services:
+  postgres:
+    image: postgres:latest
+    container_name: poems-postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - poems-volume:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d
+    ports:
+      - "127.0.0.1:5500:5432"
+    restart: unless-stopped
+    networks:
+      - poems-network
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      
+  poems.loader:
+    image: v0r0n01d/poems-loader:latest
+    container_name: poems-loader
+    environment:
+      - ConnectionStrings__PoemsDatabase=Host=poems-postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - ElasticsearchEnabled=${ElasticsearchEnabled}
+      - PathToFile=${PathToFile}
+      - AutoShutdown=true
+    volumes:
+      - C:\Repos\Data:/app/imports:ro
+    restart: no
+    networks:
+      - poems-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  poems.site:
+    image: v0r0n01d/poems-site:latest
+    container_name: poems-site
+    environment:
+      - ConnectionStrings__PoemsDatabase=Host=poems-postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - ElasticsearchEnabled=${ElasticsearchEnabled}
+    ports:
+      - "127.0.0.1:32164:8080"
+    restart: unless-stopped
+    networks:
+      - poems-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+networks:
+  poems-network:
+volumes:
+  poems-volume:
