@@ -26,10 +26,10 @@
     environment:
       - ConnectionStrings__PoemsDatabase=Host=poems-postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       - ElasticsearchEnabled=${ElasticsearchEnabled}
-      - PathToFile=${PathToFile}
+      - PathToFile=imports/russianPoetryWithTheme.csv
       - AutoShutdown=true
     volumes:
-      - C:\Repos\Data:/app/imports:ro
+      - ${FolderWithPoems}:/app/imports:ro
     restart: no
     networks:
       - poems-network
