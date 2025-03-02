@@ -1,10 +1,13 @@
 # PoemsSite
 
-Одностраничное приложение, реализующее автопоиск при наборе текста с использованием Entity Framework для полнотекстового поиска.
+Одностраничное приложение, реализующее автопоиск при наборе текста с использованием Entity Framework для полнотекстового
+поиска.
 
 ## Описание
 
-Данное приложение представляет собой одностраничный сайт на ASP.NET Core с одним текстовым полем, реализующий механизм автопоиска при наборе текста. Поиск осуществляется посредством полнотекстового поиска в базе данных через Entity Framework, а результаты отображаются в виде выпадающего списка.
+Данное приложение представляет собой одностраничный сайт на ASP.NET Core с одним текстовым полем, реализующий механизм
+автопоиска при наборе текста. Поиск осуществляется посредством полнотекстового поиска в базе данных через Entity
+Framework, а результаты отображаются в виде выпадающего списка.
 
 ## Технологии
 
@@ -12,41 +15,53 @@
 - Entity Framework Core
 - PostgreSQL
 - Docker
-- Полнотекстовый поиск (Full-text search)
 
-## Запущенный экземпляр
+## Доступный экземпляр
 
-Экземпляр данного приложения запущен на [сервере](http://93.127.222.164:83/).
-- Экземпляр подключен к базе данных с данными из набора данных: [Russian Poetry Dataset](https://www.kaggle.com/datasets/greencools/russianpoetry).
+Вы можете ознакомиться с работающим экземпляром проекта на [сервере](https://v0r0n.ru/).
 
-## Запуск приложения
+## Запуск приложения с использованием Docker Compose
 
-### 1. Подготовка базы данных
-- Установить PostgreSQL
-- Создать новую базу данных
-- Выполнить скрипт `db_code.txt` в созданной базе данных
+### Предварительные требования
+- Docker и Docker Compose
 
-### 2. Загрузка данных
-- Скачать набор данных в формате CSV с [Russian Poetry Dataset](https://www.kaggle.com/datasets/greencools/russianpoetry)
-- В проекте Poems.Loader:
-  - Переименовать `example_connection_strings.json` в `connection_strings.json`
-  - Обновить строку подключения к базе данных в `connection_strings.json`
-  - Указать путь к CSV файлу в `appsettings.json` (параметр PathToFile)
-  - Запустить Loader для импорта данных
+### Пошаговая инструкция
 
-### 3. Настройка веб-приложения
-- В проекте Poems.Site:
-  - Переименовать `example_connection_strings.json` в `connection_strings.json`
-  - Обновить строку подключения к базе данных в `connection_strings.json`
+1. **Скачайте набор данных.**  
+   Загрузите файл `russianPoetryWithTheme.csv` с [Russian Poetry Dataset](https://www.kaggle.com/datasets/greencools/russianpoetry) и распакуйте архив.  
+   Либо создайте файл `download.py` со следующим содержимым и выполните его в целевой директории:
 
-### 4. Развертывание в Docker
-- Создать образ приложения выполнив команду в корневой директории ./Poems
-```bash
-docker build -t poems-site -f Dockerfile .
-```
+   ```python
+   import urllib.request
+   import zipfile
 
-- Запустить контейнер командой
-```bash
-docker run -d --name site --rm -p 85:8080 poems-site
-```
+   url = 'https://www.kaggle.com/api/v1/datasets/download/greencools/russianpoetry'
+   zip_filename = 'russianpoetry.zip'
 
+   urllib.request.urlretrieve(url, zip_filename)
+
+   with zipfile.ZipFile(zip_filename, 'r') as archive:
+       archive.extractall()
+   ```
+
+2. **Получите исходный код.**  
+   Скачайте папку `compose` из корня репозитория или клонируйте весь репозиторий:
+
+   ```bash
+   git clone https://github.com/V0R0N01D/PoemsSite.git
+   cd ./PoemsSite/compose
+   ```
+
+3. **Настройте окружение.**  
+   В папке `compose` отредактируйте файл `.env`, указав в параметре `FolderWithPoems` путь к директории, где находится загруженный файл `russianPoetryWithTheme.csv`.
+
+
+4. **Запустите приложение.**  
+   Выполните следующую команду для запуска контейнеров:
+
+   ```bash
+   docker compose up -d
+   ```
+
+5. **Доступ к приложению.**  
+   После запуска приложение будет доступно по адресу: [http://localhost:32164](http://localhost:32164)
