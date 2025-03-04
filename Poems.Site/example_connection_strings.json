@@ -6,9 +6,9 @@
   "ExternalServices": {
     "ElasticSearch": {
       "Url": "https://localhost:9200",
-      "Fingerprint": "fingerprint",
-      "ApiKey": "apikey",
-      "IndexTitle": "poems"
+      "IndexTitle": "poems",
+      "Login": "login",
+      "Password": "password"
     }
   }
 }

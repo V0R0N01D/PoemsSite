@@ -49,12 +49,12 @@ public class Program
                 .GetRequiredSection("ElasticSearch")
                 .Get<ElasticsearchConfiguration>()!;
             builder.Services.AddSingleton(elasticConfiguration);
-
             builder.Services.AddSingleton<ElasticsearchClient>(_
                 => new ElasticsearchClient(new ElasticsearchClientSettings(
                         new Uri(elasticConfiguration.Url))
-                    .CertificateFingerprint(elasticConfiguration.Fingerprint)
-                    .Authentication(new ApiKey(elasticConfiguration.ApiKey))));
+                    .ServerCertificateValidationCallback((_, _, _, _) => true)
+                    .Authentication(new BasicAuthentication(elasticConfiguration.Login,
+                        elasticConfiguration.Password))));
 
             builder.Services
                 .AddKeyedScoped<IPoemSearchRepository, ElasticPoemSearchRepository>("elastic");
