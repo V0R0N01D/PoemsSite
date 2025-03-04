@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Poems.Common.Models.Elasticsearch;
 using Poems.Loader.Services.Interfaces;
@@ -6,7 +7,7 @@ namespace Poems.Loader.Services;
 
 public class ElasticsearchDataLoadingService(
     ILogger<ElasticsearchDataLoadingService> logger,
-    IImportPreparationService elasticsearchImportPreparationService,
+    [FromKeyedServices("elastic")] IImportPreparationService elasticsearchImportPreparationService,
     IRecordsReader<PoemWithAuthor> dbReaderService,
     IDataImporter<PoemWithAuthor> elasticsearchImporter)
     : IDataLoadingService
