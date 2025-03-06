@@ -7,10 +7,8 @@
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - poems-volume:/var/lib/postgresql/data
+      - poems-data:/var/lib/postgresql/data
       - ./db-init:/docker-entrypoint-initdb.d
-    ports:
-      - "127.0.0.1:5500:5432"
     restart: unless-stopped
     networks:
       - poems-network
@@ -19,40 +17,189 @@
       interval: 10s
       timeout: 5s
       retries: 5
-      
+
   poems.loader:
-    image: v0r0n01d/poems-loader:latest
-    container_name: poems-loader
-    environment:
-      - ConnectionStrings__PoemsDatabase=Host=poems-postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - ElasticsearchEnabled=${ElasticsearchEnabled}
-      - PathToFile=imports/russianPoetryWithTheme.csv
-      - AutoShutdown=true
-    volumes:
-      - ${FolderWithPoems}:/app/imports:ro
-    restart: no
-    networks:
-      - poems-network
     depends_on:
       postgres:
         condition: service_healthy
+      es01:
+        condition: service_healthy
+        required: false
+    image: v0r0n01d/poems-loader:${POEMS_VERSION}
+    container_name: poems-loader
+    environment:
+      - ConnectionStrings__PoemsDatabase=Host=poems-postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - ElasticsearchEnabled=${ELASTICSEARCH_ENABLED}
+      - PathToFile=imports/russianPoetryWithTheme.csv
+      - AutoShutdown=true
+      - ExternalServices__ElasticSearch__Url=https://es01:9200
+      - ExternalServices__ElasticSearch__IndexTitle=${INDEX_TITLE}
+      - ExternalServices__ElasticSearch__Login=elastic
+      - ExternalServices__ElasticSearch__Password=${ELASTIC_PASSWORD}
+    volumes:
+      - ${FOLDER_WITH_POEMS}:/app/imports:ro
+    restart: no
+    networks:
+      - poems-network
 
   poems.site:
-    image: v0r0n01d/poems-site:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      es01:
+        condition: service_healthy
+        required: false
+    image: v0r0n01d/poems-site:${POEMS_VERSION}
     container_name: poems-site
     environment:
       - ConnectionStrings__PoemsDatabase=Host=poems-postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - ElasticsearchEnabled=${ElasticsearchEnabled}
+      - ElasticsearchEnabled=${ELASTICSEARCH_ENABLED}
+      - ExternalServices__ElasticSearch__Url=https://es01:9200
+      - ExternalServices__ElasticSearch__IndexTitle=${INDEX_TITLE}
+      - ExternalServices__ElasticSearch__Login=elastic
+      - ExternalServices__ElasticSearch__Password=${ELASTIC_PASSWORD}
     ports:
       - "127.0.0.1:32164:8080"
     restart: unless-stopped
     networks:
       - poems-network
+
+
+
+
+  setup:
+    profiles: ["elastic"]
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs
+    user: "0"
+    command: >
+      bash -c '
+        if [ x${ELASTIC_PASSWORD} == x ]; then
+          echo "Set the ELASTIC_PASSWORD environment variable in the .env file";
+          exit 1;
+        elif [ x${KIBANA_PASSWORD} == x ]; then
+          echo "Set the KIBANA_PASSWORD environment variable in the .env file";
+          exit 1;
+        fi;
+        if [ ! -f config/certs/ca.zip ]; then
+          echo "Creating CA";
+          bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
+          unzip config/certs/ca.zip -d config/certs;
+        fi;
+        if [ ! -f config/certs/certs.zip ]; then
+          echo "Creating certs";
+          echo -ne \
+          "instances:\n"\
+          "  - name: es01\n"\
+          "    dns:\n"\
+          "      - es01\n"\
+          "      - localhost\n"\
+          "    ip:\n"\
+          "      - 127.0.0.1\n"\
+          > config/certs/instances.yml;
+          bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
+          unzip config/certs/certs.zip -d config/certs;
+        fi;
+        echo "Setting file permissions"
+        chown -R root:root config/certs;
+        find . -type d -exec chmod 750 \{\} \;;
+        find . -type f -exec chmod 640 \{\} \;;
+        echo "Waiting for Elasticsearch availability";
+        until curl -s --cacert config/certs/ca/ca.crt https://es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
+        echo "Setting kibana_system password";
+        until curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" https://es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+        echo "All done!";
+      '
+    healthcheck:
+      test: [ "CMD-SHELL", "[ -f config/certs/es01/es01.crt ]" ]
+      interval: 1s
+      timeout: 5s
+      retries: 120
+    networks:
+      - poems-network
+
+  es01:
+    profiles: ["elastic"]
     depends_on:
-      postgres:
+      setup:
         condition: service_healthy
+    container_name: es01
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs
+      - es-data:/usr/share/elasticsearch/data
+    environment:
+      - node.name=es01
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - bootstrap.memory_lock=true
+      - cluster.initial_master_nodes=es01
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=certs/es01/es01.key
+      - xpack.security.http.ssl.certificate=certs/es01/es01.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=certs/es01/es01.key
+      - xpack.security.transport.ssl.certificate=certs/es01/es01.crt
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.license.self_generated.type=${LICENSE}
+      - xpack.ml.use_auto_machine_memory_percent=true
+    mem_limit: ${MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+        ]
+      interval: 5s
+      timeout: 10s
+      retries: 120
+    restart: unless-stopped
+    networks:
+      - poems-network
+
+  kibana:
+    profiles: ["elastic"]
+    depends_on:
+      es01:
+        condition: service_healthy
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    volumes:
+      - certs:/usr/share/kibana/config/certs
+      - kibana-data:/usr/share/kibana/data
+    ports:
+      - ${KIBANA_PORT}:5601
+    environment:
+      - SERVERNAME=kibana
+      - ELASTICSEARCH_HOSTS=https://es01:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+    mem_limit: ${MEM_LIMIT}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 5s
+      timeout: 10s
+      retries: 120
+    restart: unless-stopped
+    networks:
+      - poems-network
+
 
 networks:
   poems-network:
 volumes:
-  poems-volume:
+  poems-data:
+  certs:
+  es-data:
+  kibana-data:
