@@ -12,32 +12,51 @@
 						<span class="ms-2 help-icon"
 						      data-bs-toggle="tooltip"
 						      data-bs-placement="top"
-						      title="Поиск осуществляется по названию и тексту произведения">?</span>
+						      data-bs-title="Поиск осуществляется по автору, названию и тексту произведения">?</span>
 					</div>
 
-					<div class="search-container">
+					<ul class="nav nav-tabs mb-3" id="searchTabs" role="tablist">
+						<li class="nav-item" role="presentation">
+							<button class="nav-link active" id="db-tab" data-bs-toggle="tab"
+									data-search-type="db" type="button" role="tab" aria-selected="true">
+								<i class="bi bi-database me-1"></i>База данных
+							</button>
+						</li>
+
+						<li class="nav-item" role="presentation" id="elastic-tab-container"
+							style="display: none">
+							<button class="nav-link" id="elastic-tab" data-bs-toggle="tab"
+									data-search-type="elastic" type="button" role="tab" aria-selected="false">
+								<i class="bi bi-search me-1"></i>Elasticsearch
+							</button>
+						</li>
+					</ul>
+
+					<div class="search-container mb-4">
 						<div class="position-relative">
-							<small class="text-muted">Время поиска: <span id="queryTime">0</span>мс</small>
+							<div class="d-flex align-items-center justify-content-between mb-2">
+								<small class="text-muted">
+									<i class="bi bi-clock me-1"></i>Время поиска: <span id="queryTime">0</span>мс
+								</small>
+							</div>
 							<input type="text"
-							       id="searchBox"
-							       class="form-control form-control-lg"
-							       placeholder="Введите название или текст произведения..."
-							       autocomplete="off">
+								   id="searchBox"
+								   class="form-control form-control-lg"
+								   placeholder="Введите название или текст произведения..."
+								   autocomplete="off">
 						</div>
 						<div id="suggestions"
-						     class="dropdown-menu w-100"
-						     style="max-height: 300px; overflow-y: auto;">
+							 class="dropdown-menu w-100">
 						</div>
 					</div>
 
 					<div id="poemContainer" class="card shadow mt-4" style="display: none;">
 						<div class="card-body">
-							<h3 id="poemTitle"></h3>
-							<p id="poemAuthor"></p>
+							<h3 id="poemTitle" class="mb-2"></h3>
+							<p id="poemAuthor" class="text-muted mb-4"></p>
 							<div id="poemContent" class="white-space-pre-wrap"></div>
 						</div>
 					</div>
-
 				</div>
 			</div>
 		</div>
@@ -49,7 +68,8 @@
 		import {PoemSearch} from '/js/search.js';
 
 		document.addEventListener('DOMContentLoaded', () => {
-			new PoemSearch();
+			const elasticsearchEnabled = @Json.Serialize(Model.ElasticsearchEnabled);
+			new PoemSearch({elasticsearchEnabled});
 		});
 	</script>
 }

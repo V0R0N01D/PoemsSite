@@ -2,11 +2,11 @@ import {ResultObject} from "./resultObject.js";
 
 export class ApiService {
     constructor() {
-        this.baseURL = '/api/'
+        this.baseURL = '/api/';
     }
 
-    async searchPoemsInDb(query) {
-        const url = `${this.baseURL}poems/search/db?query=${encodeURIComponent(query)}`;
+    async searchPoems(query, searchType = 'db') {
+        const url = `${this.baseURL}poems/search/${searchType}?query=${encodeURIComponent(query)}`;
         return this.sendRequest(url);
     }
 
@@ -14,7 +14,7 @@ export class ApiService {
         const url = `${this.baseURL}poems/${poemId}`;
         return await this.sendRequest(url);
     }
-    
+
     async sendRequest(url, method = 'GET', body) {
         try {
             const response = await fetch(url, body);
@@ -29,7 +29,7 @@ export class ApiService {
             return ResultObject.Fail(message);
         }
     }
-    
+
     async processResponse(response) {
         if (!response.ok) {
             return ResultObject.Fail(await response.text());
@@ -47,6 +47,4 @@ export class ApiService {
             return ResultObject.Fail("Ошибка десериализации ответа сервера.");
         }
     }
-
-
 }

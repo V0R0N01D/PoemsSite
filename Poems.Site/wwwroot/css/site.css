@@ -99,3 +99,39 @@ body {
     white-space: pre-wrap;
     word-wrap: break-word;
 }
+
+
+.nav-tabs .nav-link {
+    cursor: pointer;
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+    padding: 0.5rem 1rem;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: #e9ecef #e9ecef #dee2e6;
+}
+
+.nav-tabs .nav-link.active {
+    color: #495057;
+    background-color: #fff;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+
+.suggestion-rank {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.loading-indicator {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+}
+
+.nav-tabs .nav-link.active {
+    font-weight: 500;
+    border-bottom-width: 2px;
+}
