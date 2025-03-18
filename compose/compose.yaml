@@ -25,7 +25,7 @@
       es01:
         condition: service_healthy
         required: false
-    image: v0r0n01d/poems-loader:${POEMS_VERSION}
+    image: v0r0n01d/poems-loader:${POEMS_LOADER_VERSION}
     container_name: poems-loader
     environment:
       - ConnectionStrings__PoemsDatabase=Host=poems-postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
@@ -49,7 +49,7 @@
       es01:
         condition: service_healthy
         required: false
-    image: v0r0n01d/poems-site:${POEMS_VERSION}
+    image: v0r0n01d/poems-site:${POEMS_SITE_VERSION}
     container_name: poems-site
     environment:
       - ConnectionStrings__PoemsDatabase=Host=poems-postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
