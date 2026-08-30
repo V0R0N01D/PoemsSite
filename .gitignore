@@ -5,6 +5,7 @@
 
 
 connection_strings.json
+/compose/init-data/
 
 # User-specific files
 *.suo
