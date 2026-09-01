@@ -4,12 +4,12 @@ namespace Poems.Common.Models.Database;
 
 public partial class PoemsContext : DbContext
 {
-	public PoemsContext(DbContextOptions<PoemsContext> options)
+    public PoemsContext(DbContextOptions<PoemsContext> options)
         : base(options)
     {
     }
 
-	public virtual DbSet<Author> Authors { get; set; }
+    public virtual DbSet<Author> Authors { get; set; }
 
     public virtual DbSet<Poem> Poems { get; set; }
 
@@ -17,31 +17,35 @@ public partial class PoemsContext : DbContext
     {
         modelBuilder.Entity<Author>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("authors_pk");
+            entity.HasKey(author => author.Id).HasName("authors_pk");
 
             entity.ToTable("authors");
 
-            entity.HasIndex(e => e.Name, "authors_unique").IsUnique();
+            entity.HasIndex(author => author.Name, "authors_unique").IsUnique();
 
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(author => author.Id).HasColumnName("id");
+            entity.Property(author => author.Name).HasColumnName("name");
         });
 
-        modelBuilder.Entity<Poem>(entity =>
+        modelBuilder.Entity<Poem>(poemEntity =>
         {
-            entity.HasKey(e => e.Id).HasName("poems_pk");
+            poemEntity.HasKey(poem => poem.Id).HasName("poems_pk");
 
-            entity.ToTable("poems");
+            poemEntity.ToTable("poems");
 
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.AuthorId).HasColumnName("author_id");
-            entity.Property(e => e.Content).HasColumnName("content");
-            entity.Property(e => e.Searchvector).HasColumnName("searchvector");
-            entity.Property(e => e.Title).HasColumnName("title");
+            poemEntity.HasIndex(e => e.SearchVector, "poems_search_vector_idx").HasMethod("gin");
 
-            entity.HasOne(d => d.Author).WithMany(p => p.Poems)
-                .HasForeignKey(d => d.AuthorId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+            poemEntity.Property(poem => poem.Id).HasColumnName("id");
+            poemEntity.Property(poem => poem.AuthorId).HasColumnName("author_id");
+            poemEntity.Property(poem => poem.Content).HasColumnName("content");
+            poemEntity.Property(poem => poem.SearchVector).HasColumnName("searchvector");
+            poemEntity.Property(poem => poem.Title).HasColumnName("title");
+
+            poemEntity
+                .HasOne(poem => poem.Author)
+                .WithMany(author => author.Poems)
+                .HasForeignKey(poem => poem.AuthorId)
+                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("poems_authors_fk");
         });
 

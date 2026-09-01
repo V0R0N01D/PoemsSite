@@ -33,7 +33,7 @@ Framework или при помощи Elasticsearch, а результаты от
 ### Пошаговая инструкция
 
 1. **Получите исходный код.**
-   Скачайте папку `compose` из корня репозитория или клонируйте весь репозиторий:
+   Клонируйте репозиторий:
    ```bash
    git clone https://github.com/V0R0N01D/PoemsSite.git
    cd ./PoemsSite/compose

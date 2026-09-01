@@ -11,6 +11,8 @@ public class PostgresImportPreparationService(
 {
     public async Task<bool> PrepareDestinationAsync(CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("Применение миграций PostgreSQL.");
+        await context.Database.MigrateAsync(cancellationToken);
         return await CheckPoemExist(cancellationToken);
     }
 

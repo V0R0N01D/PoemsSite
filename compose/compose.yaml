@@ -8,12 +8,11 @@
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - poems-data:/var/lib/postgresql/data
-      - ./db-init:/docker-entrypoint-initdb.d
     restart: unless-stopped
     networks:
       - poems-network
     healthcheck:
-      test: [ "CMD", "pg_isready" ]
+      test: [ "CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\"" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,7 +24,11 @@
       es01:
         condition: service_healthy
         required: false
-    image: v0r0n01d/poems-loader:${POEMS_LOADER_VERSION}
+    build:
+      context: ..
+      dockerfile: Poems.Loader/Dockerfile
+    image: poems-loader:local
+    pull_policy: build
     container_name: poems-loader
     environment:
       - ConnectionStrings__PoemsDatabase=Host=poems-postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
@@ -44,6 +47,8 @@
 
   poems.site:
     depends_on:
+      poems.loader:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       es01:

@@ -12,7 +12,7 @@ public partial class Poem
 
     public int AuthorId { get; set; }
 
-    public NpgsqlTsVector? Searchvector { get; set; }
+    public NpgsqlTsVector? SearchVector { get; set; }
 
     public virtual Author Author { get; set; } = null!;
 }

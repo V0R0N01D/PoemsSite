@@ -29,7 +29,8 @@ internal class Program
         #region Postgres
 
         builder.Services.AddDbContext<PoemsContext>(options =>
-            options.UseNpgsql(builder.Configuration.GetConnectionString("PoemsDatabase")));
+            options.UseNpgsql(builder.Configuration.GetConnectionString("PoemsDatabase"),
+                postgres => postgres.MigrationsAssembly(typeof(Program).Assembly.FullName)));
 
         builder.Services.AddScoped<IFileInfoProvider, ConfigurationFileInfoProvider>(provider =>
             new ConfigurationFileInfoProvider(provider.GetRequiredService<IConfiguration>()));

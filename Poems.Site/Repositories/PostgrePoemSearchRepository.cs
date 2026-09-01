@@ -15,14 +15,14 @@ public class PostgrePoemSearchRepository(
         CancellationToken cancellationToken)
     {
         var poems = await dbContext.Poems
-            .Where(poem => poem.Searchvector!.Matches(
+            .Where(poem => poem.SearchVector!.Matches(
                 EF.Functions.PlainToTsQuery("russian", query)))
             .Select(poem => new PoemShortDto
             {
                 Id = poem.Id,
                 Title = poem.Title,
                 AuthorName = poem.Author.Name,
-                Rank = poem.Searchvector!.Rank(
+                Rank = poem.SearchVector!.Rank(
                     EF.Functions.PlainToTsQuery("russian", query))
             })
             //.Where(poem => poem.Rank >= minimalRank)
