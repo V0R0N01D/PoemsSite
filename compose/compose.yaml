@@ -1,7 +1,6 @@
 ﻿services:
   postgres:
     image: postgres:17
-    container_name: poems-postgres
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -18,59 +17,48 @@
       retries: 5
 
   poems.loader:
-    depends_on:
-      postgres:
-        condition: service_healthy
-      es01:
-        condition: service_healthy
-        required: false
+    extends:
+      file: compose.services.yaml
+      service: loader
+    profiles: ["local"]
     build:
       context: ..
       dockerfile: Poems.Loader/Dockerfile
     image: poems-loader:local
     pull_policy: build
-    container_name: poems-loader
-    environment:
-      - ConnectionStrings__PoemsDatabase=Host=poems-postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - ElasticsearchEnabled=${ELASTICSEARCH_ENABLED}
-      - PathToFile=imports/russianPoetryWithTheme.csv
-      - AutoShutdown=true
-      - ExternalServices__ElasticSearch__Url=https://es01:9200
-      - ExternalServices__ElasticSearch__IndexTitle=${INDEX_TITLE}
-      - ExternalServices__ElasticSearch__Login=elastic
-      - ExternalServices__ElasticSearch__Password=${ELASTIC_PASSWORD}
-    volumes:
-      - ${FOLDER_WITH_POEMS}:/app/imports:ro
-    restart: no
-    networks:
-      - poems-network
 
   poems.site:
+    extends:
+      file: compose.services.yaml
+      service: site
+    profiles: ["local"]
+    build:
+      context: ..
+      dockerfile: Poems.Site/Dockerfile
+    image: poems-site:local
+    pull_policy: build
     depends_on:
       poems.loader:
         condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
-      es01:
-        condition: service_healthy
-        required: false
-    image: v0r0n01d/poems-site:${POEMS_SITE_VERSION}
-    container_name: poems-site
-    environment:
-      - ConnectionStrings__PoemsDatabase=Host=poems-postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      - ElasticsearchEnabled=${ELASTICSEARCH_ENABLED}
-      - ExternalServices__ElasticSearch__Url=https://es01:9200
-      - ExternalServices__ElasticSearch__IndexTitle=${INDEX_TITLE}
-      - ExternalServices__ElasticSearch__Login=elastic
-      - ExternalServices__ElasticSearch__Password=${ELASTIC_PASSWORD}
-    ports:
-      - "127.0.0.1:32164:8080"
-    restart: unless-stopped
-    networks:
-      - poems-network
 
+  poems.loader.hub:
+    extends:
+      file: compose.services.yaml
+      service: loader
+    profiles: ["dockerhub"]
+    image: ${DOCKERHUB_NAMESPACE}/poems-loader:${POEMS_LOADER_VERSION}
+    pull_policy: always
 
-
+  poems.site.hub:
+    extends:
+      file: compose.services.yaml
+      service: site
+    profiles: ["dockerhub"]
+    image: ${DOCKERHUB_NAMESPACE}/poems-site:${POEMS_SITE_VERSION}
+    pull_policy: always
+    depends_on:
+      poems.loader.hub:
+        condition: service_completed_successfully
 
   setup:
     profiles: ["elastic"]
@@ -129,7 +117,6 @@
     depends_on:
       setup:
         condition: service_healthy
-    container_name: es01
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
       - certs:/usr/share/elasticsearch/config/certs

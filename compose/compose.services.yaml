@@ -1,0 +1,43 @@
+# Shared application settings for the local and dockerhub profiles.
+# This file is consumed through extends; run compose.yaml instead.
+services:
+  loader:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      es01:
+        condition: service_healthy
+        required: false
+    environment:
+      ConnectionStrings__PoemsDatabase: Host=postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ElasticsearchEnabled: ${ELASTICSEARCH_ENABLED}
+      ExternalServices__ElasticSearch__Url: https://es01:9200
+      ExternalServices__ElasticSearch__IndexTitle: ${INDEX_TITLE}
+      ExternalServices__ElasticSearch__Login: elastic
+      ExternalServices__ElasticSearch__Password: ${ELASTIC_PASSWORD}
+      PathToFile: imports/russianPoetryWithTheme.csv
+      AutoShutdown: "true"
+    volumes:
+      - type: bind
+        source: ${FOLDER_WITH_POEMS}
+        target: /app/imports
+        read_only: true
+        bind:
+          create_host_path: false
+    restart: "no"
+    networks:
+      - poems-network
+
+  site:
+    environment:
+      ConnectionStrings__PoemsDatabase: Host=postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ElasticsearchEnabled: ${ELASTICSEARCH_ENABLED}
+      ExternalServices__ElasticSearch__Url: https://es01:9200
+      ExternalServices__ElasticSearch__IndexTitle: ${INDEX_TITLE}
+      ExternalServices__ElasticSearch__Login: elastic
+      ExternalServices__ElasticSearch__Password: ${ELASTIC_PASSWORD}
+    ports:
+      - "127.0.0.1:${SITE_PORT:-32164}:8080"
+    restart: unless-stopped
+    networks:
+      - poems-network

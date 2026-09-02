@@ -50,21 +50,32 @@ Framework или при помощи Elasticsearch, а результаты от
 3. **Запустите приложение.**
     - Для запуска базовой версии (без Elasticsearch):
       ```bash
-      docker compose up -d
+      docker compose --profile local up -d --build
       ```
+      В `.env` задано `COMPOSE_PROFILES=local`, поэтому короткая команда `docker compose up -d`
+      также собирает и запускает текущую версию. .NET SDK устанавливать на хост не требуется.
+    - Скачивание готовых образов из Docker Hub:
+      ```bash
+      docker compose --profile dockerhub up -d
+      ```
+      Этот профиль использует `pull_policy: always` и не собирает исходники. Нужна только папка `compose`.
+      Образы выбираются через `DOCKERHUB_NAMESPACE`, `POEMS_LOADER_VERSION` и `POEMS_SITE_VERSION` в `.env`.
+      **Перед первым запуском этого профиля нужно опубликовать образы текущей версии** (см. ниже).
+      Старые теги `v1.1.x` не содержат миграций и не подходят для новой пустой БД.
     - Для запуска версии с Elasticsearch (требует больше оперативной памяти):
         1. Измените параметр `ELASTICSEARCH_ENABLED` на `true` в файле `.env`
         2. Выполните команду:
            ```bash
-           docker compose --profile elastic up -d
+           docker compose --profile local --profile elastic up -d --build
            ```
+           Для готовых образов замените `--profile local` на `--profile dockerhub` и уберите `--build`.
     - Для остановки:
       ```bash
-      docker compose --profile elastic down
+      docker compose --profile "*" down
       ```
     - Для остановки с удалением данных:
       ```bash
-      docker compose --profile elastic down -v
+      docker compose --profile "*" down -v
       ```
 
 4. **Доступ к приложению.**  
