@@ -15,6 +15,7 @@ export class PoemSearch {
         this.poemTitle = document.getElementById('poemTitle');
         this.poemAuthor = document.getElementById('poemAuthor');
         this.poemContent = document.getElementById('poemContent');
+        this.scrollTopButton = document.getElementById('scrollTopButton');
         this.toastService = new ToastService();
         this.apiService = new ApiService();
         this.searchType = 'db';
@@ -23,13 +24,19 @@ export class PoemSearch {
         this.activeIndex = -1;
         this.searchLoading = false;
         this.poemLoading = false;
-        document.getElementById('elastic-tab-container').hidden = !options.elasticsearchEnabled;
+        this.elasticAvailable = options.elasticsearchEnabled ?? false;
+        this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        document.getElementById('elastic-tab-container').hidden = !this.elasticAvailable;
         this.initializeEventListeners();
+        window.history.scrollRestoration = 'manual';
+        this.restoreNavigation({initial: true});
     }
 
     initializeEventListeners() {
         this.searchBox.addEventListener('input', () => {
+            this.showResultsAfterScroll = true;
             this.cancelSearch();
+            this.rememberSearch();
             this.clearSuggestions();
             this.queryTime.textContent = '—';
             this.status.textContent = '';
@@ -38,11 +45,16 @@ export class PoemSearch {
             }
         });
         this.searchBox.addEventListener('focus', () => {
-            if (this.resultsList.childElementCount || !this.suggestionsState.hidden) this.showSuggestions();
+            if (!this.isScrolling && (this.resultsList.childElementCount || !this.suggestionsState.hidden)) {
+                this.showSuggestions();
+            }
         });
         this.searchBox.addEventListener('keydown', event => this.handleKeyDown(event));
         document.addEventListener('pointerdown', event => {
-            if (!event.target.closest('.search-control')) this.hideSuggestions();
+            if (!event.target.closest('.search-control')) {
+                this.showResultsAfterScroll = false;
+                this.hideSuggestions();
+            }
         });
         document.addEventListener('focusin', event => {
             if (!event.target.closest('.search-control')) this.hideSuggestions();
@@ -56,6 +68,7 @@ export class PoemSearch {
         document.querySelectorAll('#searchTabs button').forEach(button => {
             button.addEventListener('click', () => {
                 this.searchType = button.dataset.searchType;
+                this.rememberSearch();
                 document.querySelectorAll('#searchTabs button').forEach(tab => {
                     tab.setAttribute('aria-pressed', String(tab === button));
                 });
@@ -68,6 +81,7 @@ export class PoemSearch {
         document.querySelectorAll('[data-query]').forEach(button => {
             button.addEventListener('click', () => {
                 this.searchBox.value = button.dataset.query;
+                this.rememberSearch();
                 this.cancelSearch();
                 this.clearSuggestions();
                 this.searchBox.focus();
@@ -75,10 +89,130 @@ export class PoemSearch {
             });
         });
 
-        window.addEventListener('resize', () => this.updateSuggestionsHeight(true), {passive: true});
-        window.addEventListener('scroll', () => this.updateSuggestionsHeight(), {passive: true});
+        this.scrollTopButton.addEventListener('click', () => this.returnToSearch());
+        document.querySelector('.back-to-search').addEventListener('click', event => {
+            if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            this.returnToSearch();
+        });
+        // Browser buttons, keyboard shortcuts and mouse back/forward buttons all emit popstate.
+        window.addEventListener('popstate', () => this.restoreNavigation());
+        window.addEventListener('resize', () => {
+            this.updateSuggestionsHeight(!this.isScrolling);
+            this.updateScrollTopButton();
+        }, {passive: true});
+        window.addEventListener('scroll', () => {
+            this.updateSuggestionsHeight();
+            this.updateScrollTopButton();
+        }, {passive: true});
         window.visualViewport?.addEventListener('resize', () => this.updateSuggestionsHeight(true), {passive: true});
         window.visualViewport?.addEventListener('scroll', () => this.updateSuggestionsHeight(), {passive: true});
+    }
+
+    rememberSearch() {
+        this.cancelPoemRequest();
+        this.writeNavigation(null, {replace: this.historyPoemId === null});
+        document.title = 'Поиск русской поэзии — PoemsSite';
+    }
+
+    writeNavigation(poemId, {replace = false} = {}) {
+        const url = new URL(window.location.href);
+        const query = this.searchBox.value.trim();
+        if (query) url.searchParams.set('query', query);
+        else url.searchParams.delete('query');
+        if (this.searchType === 'elastic') url.searchParams.set('engine', 'elastic');
+        else url.searchParams.delete('engine');
+        if (poemId) url.searchParams.set('poem', poemId);
+        else url.searchParams.delete('poem');
+        url.hash = '';
+        const method = replace || url.href === window.location.href ? 'replaceState' : 'pushState';
+        window.history[method]({...window.history.state, poemsSite: true}, '', url);
+        this.historyPoemId = poemId;
+    }
+
+    restoreNavigation({initial = false} = {}) {
+        this.cancelSearch();
+        this.clearSuggestions();
+        const parameters = new URL(window.location.href).searchParams;
+        this.searchBox.value = parameters.get('query') ?? '';
+        this.searchType = this.elasticAvailable && parameters.get('engine') === 'elastic' ? 'elastic' : 'db';
+        document.querySelectorAll('#searchTabs button').forEach(button => {
+            button.setAttribute('aria-pressed', String(button.dataset.searchType === this.searchType));
+        });
+        this.queryTime.textContent = '—';
+        const poemId = parameters.get('poem');
+        this.historyPoemId = /^[1-9]\d*$/.test(poemId ?? '') && Number(poemId) <= 2147483647 ? poemId : null;
+        if (this.historyPoemId) {
+            this.selectPoem(this.historyPoemId, {pushHistory: false});
+        } else if (!initial || this.searchBox.value.trim()) {
+            this.returnToSearch({pushHistory: false});
+        } else {
+            this.writeNavigation(null, {replace: true});
+        }
+    }
+
+    returnToSearch({pushHistory = true} = {}) {
+        this.cancelPoemRequest();
+        this.cancelSearch();
+        if (pushHistory) this.writeNavigation(null);
+        document.title = 'Поиск русской поэзии — PoemsSite';
+        // Keep the poem in the document so its removal cannot jump the viewport to the top.
+        this.scrollToSection(null, this.searchBox);
+        if (this.searchBox.value.trim()) this.handleSearch();
+    }
+
+    scrollToSection(section, focusTarget) {
+        this.scrollCleanup?.();
+        this.isScrolling = true;
+        this.showResultsAfterScroll = focusTarget === this.searchBox;
+        this.hideSuggestions();
+        focusTarget.focus({preventScroll: true});
+        let timer;
+        const cleanup = () => {
+            window.clearTimeout(timer);
+            window.removeEventListener('scroll', settle);
+            window.removeEventListener('scrollend', finish);
+            this.scrollCleanup = null;
+        };
+        const finish = () => {
+            cleanup();
+            this.isScrolling = false;
+            this.updateScrollTopButton();
+            if (this.showResultsAfterScroll && document.activeElement === this.searchBox &&
+                (this.resultsList.childElementCount || !this.suggestionsState.hidden)) {
+                this.showSuggestions();
+            }
+        };
+        // The idle fallback also covers browsers without scrollend and an already-reached target.
+        const settle = () => {
+            window.clearTimeout(timer);
+            timer = window.setTimeout(finish, 150);
+        };
+        this.scrollCleanup = cleanup;
+        window.addEventListener('scroll', settle, {passive: true});
+        window.addEventListener('scrollend', finish);
+        settle();
+        const behavior = this.reducedMotion.matches ? 'instant' : 'smooth';
+        if (section) section.scrollIntoView({block: 'start', behavior});
+        else {
+            const field = this.searchBox.getBoundingClientRect();
+            const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+            const top = viewportHeight - (field.bottom + window.scrollY) < 152
+                ? Math.max(0, field.top + window.scrollY - 24)
+                : 0;
+            window.scrollTo({top, behavior});
+        }
+    }
+
+    updateScrollTopButton() {
+        this.scrollTopButton.hidden = this.poemContainer.hidden || this.searchBox.getBoundingClientRect().bottom > 0;
+    }
+
+    cancelPoemRequest() {
+        this.poemController?.abort();
+        this.poemRequestId++;
+        this.poemLoading = false;
+        this.updateLoading();
     }
 
     cancelSearch() {
@@ -169,7 +303,7 @@ export class PoemSearch {
         this.resultsList.scrollTop = 0;
         this.resultCount.textContent = `Показано произведений: ${poems.length}`;
         this.status.textContent = `${this.resultCount.textContent}. Используйте стрелки для выбора и Enter для открытия.`;
-        if (document.activeElement === this.searchBox) this.showSuggestions();
+        if (document.activeElement === this.searchBox && !this.isScrolling) this.showSuggestions();
     }
 
     showMessage(message, isError = false) {
@@ -179,12 +313,14 @@ export class PoemSearch {
         this.suggestionsState.classList.toggle('is-error', isError);
         this.suggestionsState.hidden = false;
         this.status.textContent = message;
-        if (document.activeElement === this.searchBox) this.showSuggestions();
+        if (document.activeElement === this.searchBox && !this.isScrolling) this.showSuggestions();
     }
 
     handleKeyDown(event) {
         if (event.isComposing) return;
         if (event.key === 'Escape') {
+            event.preventDefault();
+            this.showResultsAfterScroll = false;
             this.cancelSearch();
             this.hideSuggestions();
             return;
@@ -205,6 +341,7 @@ export class PoemSearch {
                 this.handleSearch();
             }
         } else if (event.key === 'Tab') {
+            this.showResultsAfterScroll = false;
             this.hideSuggestions();
         }
     }
@@ -245,7 +382,7 @@ export class PoemSearch {
         this.suggestionsBox.style.setProperty('--suggestions-height', `${Math.max(0, available)}px`);
     }
 
-    async selectPoem(poemId) {
+    async selectPoem(poemId, {pushHistory = true} = {}) {
         this.cancelSearch();
         this.hideSuggestions();
         this.poemController?.abort();
@@ -268,8 +405,9 @@ export class PoemSearch {
             this.poemContainer.hidden = false;
             document.getElementById('readingPlaceholder').hidden = true;
             this.status.textContent = 'Стихотворение открыто.';
-            this.poemTitle.focus({preventScroll: true});
-            this.poemContainer.scrollIntoView({block: 'start'});
+            if (pushHistory) this.writeNavigation(poemId);
+            document.title = `${this.poemTitle.textContent} — PoemsSite`;
+            this.scrollToSection(this.poemContainer, this.poemTitle);
         } catch (error) {
             if (error.name !== 'AbortError' && requestId === this.poemRequestId) {
                 this.toastService.showError('Не удалось открыть стихотворение. Попробуйте ещё раз.');

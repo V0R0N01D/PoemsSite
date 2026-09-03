@@ -91,6 +91,26 @@ h1 { margin: 0; font: 400 clamp(2rem, 4.5vw, 3.2rem)/1.15 var(--font-reading); l
 .poem-author { margin-block: .65rem 0; color: var(--accent); font-size: .9rem; }
 .poem-content { white-space: pre-wrap; overflow-wrap: anywhere; font: 1.15rem/1.9 var(--font-reading); }
 .back-to-search { display: inline-block; margin-block-start: 2rem; font-size: .8rem; }
+.scroll-top-button {
+    position: fixed;
+    inset-inline-start: clamp(1rem, 3vw, 3rem);
+    inset-block-start: 50%;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    min-inline-size: 2.75rem;
+    min-block-size: 2.75rem;
+    padding: .65rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: .8rem;
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: var(--shadow);
+    font-size: .85rem;
+}
+.scroll-top-button > :first-child { font-size: 1.2rem; line-height: 1; }
 .site-footer { display: flex; justify-content: flex-end; gap: 1rem; margin-block-start: 2rem; padding-block: 1.5rem; border-block-start: 1px solid var(--border); font-size: .75rem; color: var(--muted); }
 .site-footer a { color: var(--muted); }
 
@@ -105,7 +125,20 @@ h1 { margin: 0; font: 400 clamp(2rem, 4.5vw, 3.2rem)/1.15 var(--font-reading); l
 
 @media (hover: hover) {
     .suggestion-item:hover, .engine-button:hover { background: var(--accent-soft); }
+    .scroll-top-button:hover { background: var(--accent-soft); border-color: var(--accent); }
     .example-query:hover, .site-footer a:hover { color: var(--text); }
+}
+
+@media (max-width: 1100px) {
+    .scroll-top-button {
+        inset-block-start: auto;
+        inset-block-end: max(1rem, env(safe-area-inset-bottom));
+        inset-inline-start: max(.75rem, env(safe-area-inset-left));
+        padding: .5rem;
+        border-radius: 50%;
+    }
+    .scroll-top-label { display: none; }
+    .poem-card { padding-block-end: 5rem; }
 }
 
 @media (max-width: 540px) {
