@@ -5,21 +5,22 @@ export class ApiService {
         this.baseURL = '/api/';
     }
 
-    async searchPoems(query, searchType = 'db') {
+    async searchPoems(query, searchType = 'db', signal) {
         const url = `${this.baseURL}poems/search/${searchType}?query=${encodeURIComponent(query)}`;
-        return this.sendRequest(url);
+        return this.sendRequest(url, signal);
     }
 
-    async getPoemById(poemId) {
+    async getPoemById(poemId, signal) {
         const url = `${this.baseURL}poems/${poemId}`;
-        return await this.sendRequest(url);
+        return await this.sendRequest(url, signal);
     }
 
-    async sendRequest(url, method = 'GET', body) {
+    async sendRequest(url, signal) {
         try {
-            const response = await fetch(url, body);
+            const response = await fetch(url, {signal});
             return await this.processResponse(response);
         } catch (error) {
+            if (error.name === 'AbortError') throw error;
             let message = "Неизвестная ошибка.";
             if (error instanceof TypeError) {
                 message = "Ошибка сети."

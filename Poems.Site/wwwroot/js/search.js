@@ -1,194 +1,287 @@
-﻿import {ToastService} from "./toast.js";
-import {ApiService} from "./apiService.js";
+import {ToastService} from './toast.js';
+import {ApiService} from './apiService.js';
 
 export class PoemSearch {
     constructor(options = {}) {
-        this.searchBox = document.getElementById("searchBox");
-        this.suggestionsBox = document.getElementById("suggestions");
+        this.searchBox = document.getElementById('searchBox');
+        this.suggestionsBox = document.getElementById('suggestions');
+        this.resultsList = document.getElementById('searchResults');
+        this.resultCount = document.getElementById('resultCount');
+        this.suggestionsState = document.getElementById('suggestionsState');
+        this.status = document.getElementById('searchStatus');
         this.queryTime = document.getElementById('queryTime');
-        this.elasticTabContainer = document.getElementById('elastic-tab-container');
-
+        this.loadingIndicator = document.getElementById('loadingIndicator');
         this.poemContainer = document.getElementById('poemContainer');
         this.poemTitle = document.getElementById('poemTitle');
         this.poemAuthor = document.getElementById('poemAuthor');
         this.poemContent = document.getElementById('poemContent');
-
-        this.searchType = 'db';
-
         this.toastService = new ToastService();
         this.apiService = new ApiService();
-
-        this.elasticAvailable = options.elasticsearchEnabled ?? false;
-        this.isLoading = false;
-
-        this.initializeApp();
-    }
-
-    async initializeApp() {
-        if (this.elasticAvailable) {
-            this.elasticTabContainer.style.display = 'block';
-        }
-
-        this.loadingIndicator = document.createElement('div');
-        this.loadingIndicator.className = 'spinner-grow spinner-grow-sm text-primary loading-indicator';
-        this.loadingIndicator.setAttribute('role', 'status');
-        this.loadingIndicator.style.opacity = '0.7';
-        this.loadingIndicator.style.width = '1.2rem';
-        this.loadingIndicator.style.height = '1.2rem';
-        this.loadingIndicator.style.display = 'none';
-        this.loadingIndicator.innerHTML = '<span class="visually-hidden">Загрузка...</span>';
-
-        const searchContainer = document.querySelector('.search-container .position-relative');
-        searchContainer.appendChild(this.loadingIndicator);
-
+        this.searchType = 'db';
+        this.requestId = 0;
+        this.poemRequestId = 0;
+        this.activeIndex = -1;
+        this.searchLoading = false;
+        this.poemLoading = false;
+        document.getElementById('elastic-tab-container').hidden = !options.elasticsearchEnabled;
         this.initializeEventListeners();
     }
 
     initializeEventListeners() {
-        this.searchBox.addEventListener("input", () => {
-            clearTimeout(this.searchTimeout);
-            this.searchTimeout = setTimeout(() => this.handleSearch(), 500);
-        });
-
-        this.searchBox.addEventListener("focus", () => {
+        this.searchBox.addEventListener('input', () => {
+            this.cancelSearch();
+            this.clearSuggestions();
+            this.queryTime.textContent = '—';
+            this.status.textContent = '';
             if (this.searchBox.value.trim()) {
-                this.showSuggestions();
+                this.searchTimeout = window.setTimeout(() => this.handleSearch(), 300);
             }
         });
-        document.addEventListener("click",
-            (e) => this.handleClickOutside(e));
-        this.suggestionsBox.addEventListener("click",
-            (e) => this.handleSelectPoem(e));
-
-        document.querySelectorAll('#searchTabs button')
-            .forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const searchType = e.target.getAttribute('data-search-type');
-                    this.updateSearchType(searchType);
-                    if (this.searchBox.value.trim()) {
-                        this.handleSearch();
-                    }
+        this.searchBox.addEventListener('focus', () => {
+            if (this.resultsList.childElementCount || !this.suggestionsState.hidden) this.showSuggestions();
+        });
+        this.searchBox.addEventListener('keydown', event => this.handleKeyDown(event));
+        document.addEventListener('pointerdown', event => {
+            if (!event.target.closest('.search-control')) this.hideSuggestions();
+        });
+        document.addEventListener('focusin', event => {
+            if (!event.target.closest('.search-control')) this.hideSuggestions();
+        });
+        // Keep the combobox focused when selecting an option with a mouse.
+        this.resultsList.addEventListener('mousedown', event => event.preventDefault());
+        this.resultsList.addEventListener('click', event => {
+            const option = event.target.closest('[data-poem-id]');
+            if (option) this.selectPoem(option.dataset.poemId);
+        });
+        document.querySelectorAll('#searchTabs button').forEach(button => {
+            button.addEventListener('click', () => {
+                this.searchType = button.dataset.searchType;
+                document.querySelectorAll('#searchTabs button').forEach(tab => {
+                    tab.setAttribute('aria-pressed', String(tab === button));
                 });
+                this.cancelSearch();
+                this.clearSuggestions();
+                this.searchBox.focus();
+                this.handleSearch();
             });
+        });
+        document.querySelectorAll('[data-query]').forEach(button => {
+            button.addEventListener('click', () => {
+                this.searchBox.value = button.dataset.query;
+                this.cancelSearch();
+                this.clearSuggestions();
+                this.searchBox.focus();
+                this.handleSearch();
+            });
+        });
+
+        window.addEventListener('resize', () => this.updateSuggestionsHeight(true), {passive: true});
+        window.addEventListener('scroll', () => this.updateSuggestionsHeight(), {passive: true});
+        window.visualViewport?.addEventListener('resize', () => this.updateSuggestionsHeight(true), {passive: true});
+        window.visualViewport?.addEventListener('scroll', () => this.updateSuggestionsHeight(), {passive: true});
     }
 
-    updateSearchType(searchType) {
-        this.searchType = searchType;
+    cancelSearch() {
+        window.clearTimeout(this.searchTimeout);
+        this.searchController?.abort();
+        this.requestId++;
+        this.searchLoading = false;
+        this.updateLoading();
     }
 
-    setLoading(isLoading) {
-        this.isLoading = isLoading;
-        if (isLoading) {
-            this.loadingIndicator.style.display = 'inline-block';
-        } else {
-            this.loadingIndicator.style.display = 'none';
-        }
-    }
-
-    handleClickOutside(e) {
-        if (!this.searchBox.contains(e.target)
-            && !this.suggestionsBox.contains(e.target)) {
-            this.hideSuggestions();
-        }
+    updateLoading() {
+        this.loadingIndicator.hidden = !this.searchLoading && !this.poemLoading;
+        this.searchBox.setAttribute('aria-busy', String(this.searchLoading));
+        this.poemContainer.setAttribute('aria-busy', String(this.poemLoading));
     }
 
     async handleSearch() {
+        this.cancelSearch();
         const query = this.searchBox.value.trim();
-        if (!query) {
-            this.hideSuggestions();
-            return;
+        if (!query) return;
+        const requestId = this.requestId;
+        this.searchController = new AbortController();
+        this.searchLoading = true;
+        this.updateLoading();
+        this.status.textContent = 'Ищем стихотворения…';
+        try {
+            const result = await this.apiService.searchPoems(query, this.searchType, this.searchController.signal);
+            if (requestId !== this.requestId) return;
+            if (!result.success) {
+                this.showMessage(result.error, true);
+                return;
+            }
+            const time = Number(result.result.queryTimeMs);
+            this.queryTime.textContent = `${time.toLocaleString('ru-RU', {maximumFractionDigits: 1})} мс`;
+            this.updateSuggestions(result.result.poems);
+        } catch (error) {
+            if (error.name !== 'AbortError' && requestId === this.requestId) {
+                this.showMessage('Не удалось выполнить поиск. Попробуйте ещё раз.', true);
+            }
+        } finally {
+            if (requestId === this.requestId) {
+                this.searchLoading = false;
+                this.updateLoading();
+            }
         }
-
-        this.setLoading(true);
-        const result = await this.apiService.searchPoems(query, this.searchType);
-        this.setLoading(false);
-
-        if (!result.success) {
-            this.showSearchError(result.error);
-            return;
-        }
-
-        this.showSearchStatus(result.result);
-        this.updateSuggestions(result.result.poems);
     }
 
-    async handleSelectPoem(event) {
-        const button = event.target.closest("button.dropdown-item");
-        if (!button) return;
-        
-        const poemId = button.dataset.poemId;
-
-        this.setLoading(true);
-        const result = await this.apiService.getPoemById(poemId);
-        this.setLoading(false);
-
-        if (!result.success) {
-            this.toastService.showError(result.error)
-            return;
-        }
-
-        this.setPoemDataInBox(result.result);
+    clearSuggestions() {
         this.hideSuggestions();
-    }
-
-    showSearchStatus(result) {
-        this.queryTime.textContent = result.queryTimeMs;
+        this.resultsList.replaceChildren();
+        this.suggestionsState.hidden = true;
     }
 
     updateSuggestions(poems) {
-        this.suggestionsBox.innerHTML = "";
+        this.clearSuggestions();
+        if (!poems.length) {
+            this.showMessage('Ничего не найдено. Попробуйте другое слово или имя автора.');
+            return;
+        }
+        const fragment = document.createDocumentFragment();
+        poems.forEach((poem, index) => {
+            const option = document.createElement('li');
+            option.id = `poem-option-${index}`;
+            option.className = 'suggestion-item';
+            option.setAttribute('role', 'option');
+            option.setAttribute('aria-selected', 'false');
+            option.dataset.poemId = poem.id;
+            const title = document.createElement('span');
+            title.className = 'suggestion-title';
+            title.textContent = poem.title || 'Без названия';
+            const author = document.createElement('span');
+            author.className = 'suggestion-author';
+            author.textContent = poem.author_name;
+            const relevance = document.createElement('span');
+            relevance.className = 'suggestion-relevance';
+            const rank = Number(poem.rank);
+            relevance.textContent = `Релевантность: ${Number.isFinite(rank)
+                ? rank.toLocaleString('ru-RU', {minimumFractionDigits: 3, maximumFractionDigits: 3})
+                : '—'}`;
+            relevance.title = 'Чем выше значение, тем вероятнее, что результат соответствует запросу';
+            const details = document.createElement('span');
+            details.className = 'suggestion-details';
+            details.append(author, relevance);
+            option.append(title, details);
+            fragment.appendChild(option);
+        });
+        this.resultsList.appendChild(fragment);
+        this.resultsList.scrollTop = 0;
+        this.resultCount.textContent = `Показано произведений: ${poems.length}`;
+        this.status.textContent = `${this.resultCount.textContent}. Используйте стрелки для выбора и Enter для открытия.`;
+        if (document.activeElement === this.searchBox) this.showSuggestions();
+    }
 
-        if (poems.length > 0) {
+    showMessage(message, isError = false) {
+        this.clearSuggestions();
+        this.resultCount.textContent = isError ? 'Ошибка поиска' : 'Результаты поиска';
+        this.suggestionsState.textContent = message;
+        this.suggestionsState.classList.toggle('is-error', isError);
+        this.suggestionsState.hidden = false;
+        this.status.textContent = message;
+        if (document.activeElement === this.searchBox) this.showSuggestions();
+    }
+
+    handleKeyDown(event) {
+        if (event.isComposing) return;
+        if (event.key === 'Escape') {
+            this.cancelSearch();
+            this.hideSuggestions();
+            return;
+        }
+        const options = this.resultsList.children;
+        if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && options.length) {
+            event.preventDefault();
             this.showSuggestions();
-            poems.forEach(poem => this.addSuggestion(poem));
-        } else {
-            this.showSearchNoResults();
+            const nextIndex = this.activeIndex < 0
+                ? (event.key === 'ArrowDown' ? 0 : options.length - 1)
+                : this.activeIndex + (event.key === 'ArrowDown' ? 1 : -1);
+            this.setActiveOption((nextIndex + options.length) % options.length);
+        } else if (event.key === 'Enter') {
+            event.preventDefault();
+            if (!this.suggestionsBox.hidden && this.activeIndex >= 0) {
+                this.selectPoem(options[this.activeIndex].dataset.poemId);
+            } else {
+                this.handleSearch();
+            }
+        } else if (event.key === 'Tab') {
+            this.hideSuggestions();
         }
     }
 
-    addSuggestion(poem) {
-        const button = document.createElement("button");
-        button.className = "dropdown-item";
-        button.innerHTML = `
-            <div class="suggestion-title">${poem.title}</div>
-            <div class="suggestion-author text-muted">${poem.author_name}</div>
-            <div class="suggestion-rank text-muted">Релевантность: ${poem.rank.toFixed(3)}</div>
-        `;
-        button.dataset.poemId = poem.id;
-        this.suggestionsBox.appendChild(button);
-    }
-
-    setPoemDataInBox(poem) {
-        this.poemTitle.textContent = poem.title;
-        this.poemAuthor.textContent = `Автор: ${poem.authorName}`;
-        this.poemContent.textContent = poem.content;
-
-        this.poemContainer.style.display = 'block';
-    }
-
-    showSearchNoResults() {
-        this.showSuggestions();
-        this.suggestionsBox.innerHTML = `
-            <div class="dropdown-item text-muted text-center py-2">
-                Ничего не найдено.
-            </div>
-        `;
-    }
-
-    showSearchError(message) {
-        this.showSuggestions();
-        this.suggestionsBox.innerHTML = `
-            <div class="dropdown-item text-danger text-center py-2">
-                ${message}
-            </div>
-        `;
+    setActiveOption(index) {
+        this.activeIndex = index;
+        Array.from(this.resultsList.children).forEach((option, optionIndex) => {
+            option.setAttribute('aria-selected', String(optionIndex === index));
+        });
+        const option = this.resultsList.children[index];
+        this.searchBox.setAttribute('aria-activedescendant', option.id);
+        option.scrollIntoView({block: 'nearest'});
     }
 
     showSuggestions() {
-        this.suggestionsBox.classList.add("show");
+        this.suggestionsBox.hidden = false;
+        this.searchBox.setAttribute('aria-expanded', 'true');
+        this.updateSuggestionsHeight(true);
     }
 
     hideSuggestions() {
-        this.suggestionsBox.classList.remove("show");
+        this.suggestionsBox.hidden = true;
+        this.searchBox.setAttribute('aria-expanded', 'false');
+        this.searchBox.removeAttribute('aria-activedescendant');
+        this.activeIndex = -1;
+        Array.from(this.resultsList.children).forEach(option => option.setAttribute('aria-selected', 'false'));
+    }
+
+    updateSuggestionsHeight(ensureVisible = false) {
+        if (this.suggestionsBox.hidden) return;
+        const viewport = window.visualViewport;
+        const viewportBottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight;
+        let available = viewportBottom - this.suggestionsBox.getBoundingClientRect().top - 24;
+        if (ensureVisible && available < 120 && document.activeElement === this.searchBox) {
+            this.searchBox.scrollIntoView({block: 'start'});
+            available = viewportBottom - this.suggestionsBox.getBoundingClientRect().top - 24;
+        }
+        this.suggestionsBox.style.setProperty('--suggestions-height', `${Math.max(0, available)}px`);
+    }
+
+    async selectPoem(poemId) {
+        this.cancelSearch();
+        this.hideSuggestions();
+        this.poemController?.abort();
+        this.poemController = new AbortController();
+        const requestId = ++this.poemRequestId;
+        this.poemLoading = true;
+        this.updateLoading();
+        this.status.textContent = 'Открываем стихотворение…';
+        try {
+            const result = await this.apiService.getPoemById(poemId, this.poemController.signal);
+            if (requestId !== this.poemRequestId) return;
+            if (!result.success) {
+                this.toastService.showError(result.error);
+                this.status.textContent = 'Не удалось открыть стихотворение.';
+                return;
+            }
+            this.poemTitle.textContent = result.result.title || 'Без названия';
+            this.poemAuthor.textContent = result.result.authorName;
+            this.poemContent.textContent = result.result.content;
+            this.poemContainer.hidden = false;
+            document.getElementById('readingPlaceholder').hidden = true;
+            this.status.textContent = 'Стихотворение открыто.';
+            this.poemTitle.focus({preventScroll: true});
+            this.poemContainer.scrollIntoView({block: 'start'});
+        } catch (error) {
+            if (error.name !== 'AbortError' && requestId === this.poemRequestId) {
+                this.toastService.showError('Не удалось открыть стихотворение. Попробуйте ещё раз.');
+            }
+        } finally {
+            if (requestId === this.poemRequestId) {
+                this.poemLoading = false;
+                this.updateLoading();
+            }
+        }
     }
 }
+
+const page = document.querySelector('.search-page');
+if (page) new PoemSearch({elasticsearchEnabled: page.dataset.elasticsearchEnabled === 'true'});

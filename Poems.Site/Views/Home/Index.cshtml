@@ -1,75 +1,55 @@
-﻿@{
-	ViewData["Title"] = "Поиск";
+@{
+    ViewData["Title"] = "Поиск русской поэзии";
 }
 
-<div class="container py-5">
-	<div class="row justify-content-center">
-		<div class="col-md-8">
-			<div class="card shadow">
-				<div class="card-body p-4">
-					<div class="d-flex justify-content-center align-items-center mb-4">
-						<h2 class="mb-0">Поиск стихотворений</h2>
-						<span class="ms-2 help-icon"
-						      data-bs-toggle="tooltip"
-						      data-bs-placement="top"
-						      data-bs-title="Поиск осуществляется по автору, названию и тексту произведения">?</span>
-					</div>
+<section class="search-page" aria-labelledby="pageTitle" data-elasticsearch-enabled="@Json.Serialize(Model.ElasticsearchEnabled)">
+    <div class="intro">
+        <h1 id="pageTitle">Поиск русской поэзии</h1>
+    </div>
 
-					<ul class="nav nav-tabs mb-3" id="searchTabs" role="tablist">
-						<li class="nav-item" role="presentation">
-							<button class="nav-link active" id="db-tab" data-bs-toggle="tab"
-									data-search-type="db" type="button" role="tab" aria-selected="true">
-								<i class="bi bi-database me-1"></i>База данных
-							</button>
-						</li>
+    <section class="search-card" aria-label="Поиск по библиотеке">
+        <div class="search-toolbar">
+            <div id="searchTabs" class="search-engines" role="group" aria-label="Способ поиска">
+                <button id="db-tab" class="engine-button" data-search-type="db" type="button" aria-pressed="true">PostgreSQL</button>
+                <span id="elastic-tab-container" hidden>
+                    <button id="elastic-tab" class="engine-button" data-search-type="elastic" type="button" aria-pressed="false">Elasticsearch</button>
+                </span>
+            </div>
+            <span class="search-timing">Время поиска: <span id="queryTime">—</span></span>
+        </div>
 
-						<li class="nav-item" role="presentation" id="elastic-tab-container"
-							style="display: none">
-							<button class="nav-link" id="elastic-tab" data-bs-toggle="tab"
-									data-search-type="elastic" type="button" role="tab" aria-selected="false">
-								<i class="bi bi-search me-1"></i>Elasticsearch
-							</button>
-						</li>
-					</ul>
+        <div class="search-control">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>
+            <input type="search" id="searchBox" class="search-input" placeholder="Автор, название или строка…"
+                   autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-label="Поиск русской поэзии"
+                   aria-expanded="false" aria-controls="searchResults" aria-describedby="searchHint" />
+            <span id="loadingIndicator" class="loading-indicator" aria-hidden="true" hidden></span>
+            <div id="suggestions" class="suggestions" hidden>
+                <div class="suggestions-heading"><span id="resultCount">Результаты поиска</span><span aria-hidden="true">↑ ↓ для выбора</span></div>
+                <ul id="searchResults" class="suggestions-list" role="listbox" aria-label="Найденные произведения"></ul>
+                <p id="suggestionsState" class="suggestions-state" hidden></p>
+            </div>
+        </div>
+        <p id="searchHint" class="search-hint">Поиск по автору, названию и тексту. Например: <button class="example-query" type="button" data-query="Пушкин">Пушкин</button> или <button class="example-query" type="button" data-query="Я помню чудное мгновенье">Я помню чудное мгновенье</button>.</p>
+        <p id="searchStatus" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
+    </section>
 
-					<div class="search-container mb-4">
-						<div class="position-relative">
-							<div class="d-flex align-items-center justify-content-between mb-2">
-								<small class="text-muted">
-									<i class="bi bi-clock me-1"></i>Время поиска: <span id="queryTime">0</span>мс
-								</small>
-							</div>
-							<input type="text"
-								   id="searchBox"
-								   class="form-control form-control-lg"
-								   placeholder="Введите название или текст произведения..."
-								   autocomplete="off">
-						</div>
-						<div id="suggestions"
-							 class="dropdown-menu w-100">
-						</div>
-					</div>
+    <div id="readingPlaceholder" class="reading-placeholder">
+        <span class="ornament" aria-hidden="true">❧</span>
+        <p>Вспомните одну строку.<br /><span>Остальное найдётся.</span></p>
+    </div>
 
-					<div id="poemContainer" class="card shadow mt-4" style="display: none;">
-						<div class="card-body">
-							<h3 id="poemTitle" class="mb-2"></h3>
-							<p id="poemAuthor" class="text-muted mb-4"></p>
-							<div id="poemContent" class="white-space-pre-wrap"></div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-</div>
+    <article id="poemContainer" class="poem-card" aria-labelledby="poemTitle" hidden>
+        <div class="poem-heading">
+            <p class="eyebrow">Наедине со стихотворением</p>
+            <h2 id="poemTitle" tabindex="-1"></h2>
+            <p id="poemAuthor" class="poem-author"></p>
+        </div>
+        <div id="poemContent" class="poem-content"></div>
+        <a class="back-to-search" href="#searchBox">↑ Вернуться к поиску</a>
+    </article>
+</section>
 
 @section Scripts {
-	<script type="module">
-		import {PoemSearch} from '/js/search.js';
-
-		document.addEventListener('DOMContentLoaded', () => {
-			const elasticsearchEnabled = @Json.Serialize(Model.ElasticsearchEnabled);
-			new PoemSearch({elasticsearchEnabled});
-		});
-	</script>
+    <script type="module" src="~/js/search.js" asp-append-version="true"></script>
 }
