@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using NpgsqlTypes;
+using Pgvector;
 using Poems.Common.Models.Database;
 
 #nullable disable
@@ -20,6 +21,7 @@ namespace Poems.Loader.Migrations
                 .HasAnnotation("ProductVersion", "8.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Poems.Common.Models.Database.Author", b =>
@@ -84,6 +86,37 @@ namespace Poems.Loader.Migrations
                     b.ToTable("poems", (string)null);
                 });
 
+            modelBuilder.Entity("Poems.Common.Models.Database.PoemChunk", b =>
+                {
+                    b.Property<int>("PoemId")
+                        .HasColumnType("integer")
+                        .HasColumnName("poem_id");
+
+                    b.Property<int>("ChunkNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("chunk_number");
+
+                    b.Property<Vector>("Embedding")
+                        .IsRequired()
+                        .HasColumnType("vector(384)")
+                        .HasColumnName("embedding");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("text");
+
+                    b.HasKey("PoemId", "ChunkNumber")
+                        .HasName("poem_chunks_pk");
+
+                    b.HasIndex(new[] { "Embedding" }, "poem_chunks_embedding_idx");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex(new[] { "Embedding" }, "poem_chunks_embedding_idx"), "hnsw");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex(new[] { "Embedding" }, "poem_chunks_embedding_idx"), new[] { "vector_cosine_ops" });
+
+                    b.ToTable("poem_chunks", (string)null);
+                });
+
             modelBuilder.Entity("Poems.Common.Models.Database.Poem", b =>
                 {
                     b.HasOne("Poems.Common.Models.Database.Author", "Author")
@@ -93,6 +126,18 @@ namespace Poems.Loader.Migrations
                         .HasConstraintName("poems_authors_fk");
 
                     b.Navigation("Author");
+                });
+
+            modelBuilder.Entity("Poems.Common.Models.Database.PoemChunk", b =>
+                {
+                    b.HasOne("Poems.Common.Models.Database.Poem", "Poem")
+                        .WithMany()
+                        .HasForeignKey("PoemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("poem_chunks_poems_fk");
+
+                    b.Navigation("Poem");
                 });
 
             modelBuilder.Entity("Poems.Common.Models.Database.Author", b =>

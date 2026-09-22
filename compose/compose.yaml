@@ -1,6 +1,6 @@
 ﻿services:
   postgres:
-    image: postgres:17
+    image: pgvector/pgvector:pg17
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -17,48 +17,80 @@
       retries: 5
 
   poems.loader:
-    extends:
-      file: compose.services.yaml
-      service: loader
-    profiles: ["local"]
-    build:
-      context: ..
-      dockerfile: Poems.Loader/Dockerfile
-    image: poems-loader:local
-    pull_policy: build
+    image: v0r0n01d/poems-loader:${POEMS_LOADER_VERSION}
+    pull_policy: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      es01:
+        condition: service_healthy
+        required: false
+      embeddings:
+        condition: service_healthy
+        required: false
+    environment:
+      ConnectionStrings__PoemsDatabase: Host=postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ElasticsearchEnabled: ${ELASTICSEARCH_ENABLED}
+      VectorSearchEnabled: ${VECTOR_SEARCH_ENABLED:-false}
+      VectorSearch__Url: http://embeddings:8000/
+      ExternalServices__ElasticSearch__Url: https://es01:9200
+      ExternalServices__ElasticSearch__IndexTitle: ${INDEX_TITLE}
+      ExternalServices__ElasticSearch__Login: elastic
+      ExternalServices__ElasticSearch__Password: ${ELASTIC_PASSWORD}
+      PathToFile: imports/russianPoetryWithTheme.csv
+      AutoShutdown: "true"
+    volumes:
+      - type: bind
+        source: ${FOLDER_WITH_POEMS}
+        target: /app/imports
+        read_only: true
+        bind:
+          create_host_path: false
+    restart: "no"
+    networks:
+      - poems-network
 
   poems.site:
-    extends:
-      file: compose.services.yaml
-      service: site
-    profiles: ["local"]
-    build:
-      context: ..
-      dockerfile: Poems.Site/Dockerfile
-    image: poems-site:local
-    pull_policy: build
+    image: v0r0n01d/poems-site:${POEMS_SITE_VERSION}
+    pull_policy: always
     depends_on:
       poems.loader:
         condition: service_completed_successfully
+    environment:
+      ConnectionStrings__PoemsDatabase: Host=postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ElasticsearchEnabled: ${ELASTICSEARCH_ENABLED}
+      VectorSearchEnabled: ${VECTOR_SEARCH_ENABLED:-false}
+      VectorSearch__Url: http://embeddings:8000/
+      ExternalServices__ElasticSearch__Url: https://es01:9200
+      ExternalServices__ElasticSearch__IndexTitle: ${INDEX_TITLE}
+      ExternalServices__ElasticSearch__Login: elastic
+      ExternalServices__ElasticSearch__Password: ${ELASTIC_PASSWORD}
+    ports:
+      - "127.0.0.1:${SITE_PORT:-32164}:8080"
+    restart: unless-stopped
+    networks:
+      - poems-network
 
-  poems.loader.hub:
-    extends:
-      file: compose.services.yaml
-      service: loader
-    profiles: ["dockerhub"]
-    image: ${DOCKERHUB_NAMESPACE}/poems-loader:${POEMS_LOADER_VERSION}
+  embeddings:
+    profiles: ["vector"]
+    image: v0r0n01d/poems-embeddings:${POEMS_EMBEDDINGS_VERSION}
     pull_policy: always
-
-  poems.site.hub:
-    extends:
-      file: compose.services.yaml
-      service: site
-    profiles: ["dockerhub"]
-    image: ${DOCKERHUB_NAMESPACE}/poems-site:${POEMS_SITE_VERSION}
-    pull_policy: always
-    depends_on:
-      poems.loader.hub:
-        condition: service_completed_successfully
+    environment:
+      EMBEDDINGS_THREADS: ${EMBEDDINGS_THREADS:-2}
+      EMBEDDINGS_BATCH_SIZE: ${EMBEDDINGS_BATCH_SIZE:-2}
+    volumes:
+      - embedding-models:/models
+    cpus: ${EMBEDDINGS_CPUS:-2}
+    mem_limit: ${EMBEDDINGS_MEM_LIMIT:-1g}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 10m
+    networks:
+      - poems-network
 
   setup:
     profiles: ["elastic"]
@@ -192,6 +224,7 @@ networks:
   poems-network:
 volumes:
   poems-data:
+  embedding-models:
   certs:
   es-data:
   kibana-data:

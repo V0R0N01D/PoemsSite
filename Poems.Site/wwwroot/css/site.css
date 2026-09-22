@@ -54,7 +54,7 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 h1 { margin: 0; font: 400 clamp(2rem, 4.5vw, 3.2rem)/1.15 var(--font-reading); letter-spacing: -.035em; text-wrap: balance; }
 .search-card { position: relative; z-index: 2; padding: clamp(1.1rem, 3vw, 2rem); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
 .search-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .75rem; margin-block-end: 1.25rem; }
-.search-engines { display: flex; gap: .25rem; padding: .25rem; border-radius: .7rem; background: var(--surface-muted); }
+.search-engines { display: flex; flex-wrap: wrap; gap: .25rem; padding: .25rem; border-radius: .7rem; background: var(--surface-muted); }
 .engine-button { min-block-size: 2.25rem; padding: .35rem .75rem; border: 1px solid transparent; border-radius: .5rem; background: transparent; color: var(--muted); font-size: .75rem; }
 .engine-button[aria-pressed="true"] { border-color: var(--border); background: var(--surface); color: var(--accent); font-weight: 650; }
 .search-timing { color: var(--muted); font-size: .7rem; font-variant-numeric: tabular-nums; }

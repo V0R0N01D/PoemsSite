@@ -1,0 +1,24 @@
+# Local build overrides. Run from this directory:
+# docker compose -f compose.yaml -f compose.local.yaml up -d
+# Add --profile vector and/or --profile elastic for the optional search engines.
+services:
+  poems.loader:
+    build:
+      context: ..
+      dockerfile: Poems.Loader/Dockerfile
+    image: poems-loader:local
+    pull_policy: build
+
+  poems.site:
+    build:
+      context: ..
+      dockerfile: Poems.Site/Dockerfile
+    image: poems-site:local
+    pull_policy: build
+
+  embeddings:
+    build:
+      context: ..
+      dockerfile: Poems.Embeddings/Dockerfile
+    image: poems-embeddings:local
+    pull_policy: build

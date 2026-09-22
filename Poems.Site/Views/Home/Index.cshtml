@@ -2,7 +2,8 @@
     ViewData["Title"] = "Поиск русской поэзии";
 }
 
-<section class="search-page" aria-labelledby="pageTitle" data-elasticsearch-enabled="@Json.Serialize(Model.ElasticsearchEnabled)">
+<section class="search-page" aria-labelledby="pageTitle" data-elasticsearch-enabled="@Json.Serialize(Model.ElasticsearchEnabled)"
+         data-vector-search-enabled="@Json.Serialize(Model.VectorSearchEnabled)">
     <div class="intro">
         <h1 id="pageTitle">Поиск русской поэзии</h1>
     </div>
@@ -13,6 +14,9 @@
                 <button id="db-tab" class="engine-button" data-search-type="db" type="button" aria-pressed="true">PostgreSQL</button>
                 <span id="elastic-tab-container" hidden>
                     <button id="elastic-tab" class="engine-button" data-search-type="elastic" type="button" aria-pressed="false">Elasticsearch</button>
+                </span>
+                <span id="vector-tab-container" hidden>
+                    <button id="vector-tab" class="engine-button" data-search-type="vector" type="button" aria-pressed="false">По смыслу</button>
                 </span>
             </div>
             <span class="search-timing">Время поиска: <span id="queryTime">—</span></span>
@@ -30,7 +34,10 @@
                 <p id="suggestionsState" class="suggestions-state" hidden></p>
             </div>
         </div>
-        <p id="searchHint" class="search-hint">Поиск по автору, названию и тексту. Например: <button class="example-query" type="button" data-query="Пушкин">Пушкин</button> или <button class="example-query" type="button" data-query="Я помню чудное мгновенье">Я помню чудное мгновенье</button>.</p>
+        <p id="searchHint" class="search-hint">
+            <span id="textSearchHint">Поиск по автору, названию и тексту. Например: <button class="example-query" type="button" data-query="Пушкин">Пушкин</button> или <button class="example-query" type="button" data-query="Я помню чудное мгновенье">Я помню чудное мгновенье</button>.</span>
+            <span id="vectorSearchHint" hidden>Опишите тему или настроение. Например: <button class="example-query" type="button" data-query="одиночество и надежда">одиночество и надежда</button>. От 3 до 1000 символов, до 256 токенов.</span>
+        </p>
         <p id="searchStatus" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
     </section>
 

@@ -12,6 +12,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6CA34840-8454-49BD-9EFC-080F1055F00C}"
 	ProjectSection(SolutionItems) = preProject
 		compose\compose.yaml = compose\compose.yaml
+		compose\compose.local.yaml = compose\compose.local.yaml
 		compose\.env = compose\.env
 	EndProjectSection
 EndProject

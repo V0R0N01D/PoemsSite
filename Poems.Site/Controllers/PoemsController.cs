@@ -31,4 +31,12 @@ public class PoemsController(IPoemService poemService) : ControllerBase
         var poemsResult = await poemService.ElasticSearchPoemsAsync(query);
         return poemsResult.ToActionResult();
     }
+
+    [HttpGet("search/vector")]
+    public async Task<ActionResult<SearchResultDto>> VectorSearchPoems(
+        [FromQuery] string query, CancellationToken cancellationToken)
+    {
+        var poemsResult = await poemService.VectorSearchPoemsAsync(query, cancellationToken);
+        return poemsResult.ToActionResult();
+    }
 }

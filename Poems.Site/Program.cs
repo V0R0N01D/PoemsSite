@@ -9,6 +9,8 @@ using Poems.Site.Interfaces.Repository;
 using Poems.Site.Interfaces.Services;
 using Poems.Site.Repositories;
 using Poems.Site.Services;
+using Pgvector.EntityFrameworkCore;
+using Poems.Common.Embeddings;
 
 namespace Poems.Site;
 
@@ -28,7 +30,7 @@ public class Program
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddDbContext<PoemsContext>((sp, options) =>
         {
-            options.UseNpgsql(builder.Configuration.GetConnectionString("PoemsDatabase"));
+            options.UseNpgsql(builder.Configuration.GetConnectionString("PoemsDatabase"), postgres => postgres.UseVector());
             options.AddInterceptors(sp.GetRequiredService<QueryMetricsInterceptor>());
         });
         builder.Services.AddScoped<QueryMetricsInterceptor>();
@@ -39,6 +41,16 @@ public class Program
         builder.Services.AddScoped<IPoemRepository, PoemRepository>();
 
         #endregion
+
+        if (builder.Configuration.GetValue<bool>("VectorSearchEnabled"))
+        {
+            builder.Services.AddPoemEmbeddings(builder.Configuration);
+            builder.Services.AddKeyedScoped<IPoemSearchRepository, VectorPoemSearchRepository>("vector");
+        }
+        else
+        {
+            builder.Services.AddKeyedScoped<IPoemSearchRepository>("vector", (_, _) => null!);
+        }
 
         #region Elasticsearch
 

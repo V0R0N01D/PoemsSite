@@ -25,8 +25,10 @@ export class PoemSearch {
         this.searchLoading = false;
         this.poemLoading = false;
         this.elasticAvailable = options.elasticsearchEnabled ?? false;
+        this.vectorAvailable = options.vectorSearchEnabled ?? false;
         this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
         document.getElementById('elastic-tab-container').hidden = !this.elasticAvailable;
+        document.getElementById('vector-tab-container').hidden = !this.vectorAvailable;
         this.initializeEventListeners();
         window.history.scrollRestoration = 'manual';
         this.restoreNavigation({initial: true});
@@ -41,7 +43,7 @@ export class PoemSearch {
             this.queryTime.textContent = '—';
             this.status.textContent = '';
             if (this.searchBox.value.trim()) {
-                this.searchTimeout = window.setTimeout(() => this.handleSearch(), 300);
+                this.searchTimeout = window.setTimeout(() => this.handleSearch(), this.searchType === 'vector' ? 700 : 300);
             }
         });
         this.searchBox.addEventListener('focus', () => {
@@ -68,6 +70,7 @@ export class PoemSearch {
         document.querySelectorAll('#searchTabs button').forEach(button => {
             button.addEventListener('click', () => {
                 this.searchType = button.dataset.searchType;
+                this.updateSearchMode();
                 this.rememberSearch();
                 document.querySelectorAll('#searchTabs button').forEach(tab => {
                     tab.setAttribute('aria-pressed', String(tab === button));
@@ -120,7 +123,7 @@ export class PoemSearch {
         const query = this.searchBox.value.trim();
         if (query) url.searchParams.set('query', query);
         else url.searchParams.delete('query');
-        if (this.searchType === 'elastic') url.searchParams.set('engine', 'elastic');
+        if (this.searchType !== 'db') url.searchParams.set('engine', this.searchType);
         else url.searchParams.delete('engine');
         if (poemId) url.searchParams.set('poem', poemId);
         else url.searchParams.delete('poem');
@@ -135,7 +138,10 @@ export class PoemSearch {
         this.clearSuggestions();
         const parameters = new URL(window.location.href).searchParams;
         this.searchBox.value = parameters.get('query') ?? '';
-        this.searchType = this.elasticAvailable && parameters.get('engine') === 'elastic' ? 'elastic' : 'db';
+        const engine = parameters.get('engine');
+        this.searchType = this.vectorAvailable && engine === 'vector' ? 'vector'
+            : this.elasticAvailable && engine === 'elastic' ? 'elastic' : 'db';
+        this.updateSearchMode();
         document.querySelectorAll('#searchTabs button').forEach(button => {
             button.setAttribute('aria-pressed', String(button.dataset.searchType === this.searchType));
         });
@@ -229,10 +235,24 @@ export class PoemSearch {
         this.poemContainer.setAttribute('aria-busy', String(this.poemLoading));
     }
 
+    updateSearchMode() {
+        const vector = this.searchType === 'vector';
+        this.searchBox.placeholder = vector ? 'Тема, настроение или образ…' : 'Автор, название или строка…';
+        if (vector) this.searchBox.maxLength = 1000;
+        else this.searchBox.removeAttribute('maxlength');
+        document.getElementById('textSearchHint').hidden = vector;
+        document.getElementById('vectorSearchHint').hidden = !vector;
+    }
+
     async handleSearch() {
         this.cancelSearch();
         const query = this.searchBox.value.trim();
         if (!query) return;
+        if (this.searchType === 'vector' && (query.length < 3 || query.length > 1000)) {
+            this.queryTime.textContent = '—';
+            this.showMessage('Введите от 3 до 1000 символов для поиска по смыслу.');
+            return;
+        }
         const requestId = this.requestId;
         this.searchController = new AbortController();
         this.searchLoading = true;
@@ -422,4 +442,7 @@ export class PoemSearch {
 }
 
 const page = document.querySelector('.search-page');
-if (page) new PoemSearch({elasticsearchEnabled: page.dataset.elasticsearchEnabled === 'true'});
+if (page) new PoemSearch({
+    elasticsearchEnabled: page.dataset.elasticsearchEnabled === 'true',
+    vectorSearchEnabled: page.dataset.vectorSearchEnabled === 'true'
+});

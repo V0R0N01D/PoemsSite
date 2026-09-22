@@ -13,8 +13,12 @@ public partial class PoemsContext : DbContext
 
     public virtual DbSet<Poem> Poems { get; set; }
 
+    public DbSet<PoemChunk> PoemChunks { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasPostgresExtension("vector");
+
         modelBuilder.Entity<Author>(entity =>
         {
             entity.HasKey(author => author.Id).HasName("authors_pk");
@@ -47,6 +51,26 @@ public partial class PoemsContext : DbContext
                 .HasForeignKey(poem => poem.AuthorId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("poems_authors_fk");
+        });
+
+        modelBuilder.Entity<PoemChunk>(entity =>
+        {
+            entity.ToTable("poem_chunks");
+            entity.HasKey(poemChank => new { poemChank.PoemId, poemChank.ChunkNumber }).HasName("poem_chunks_pk");
+            entity.Property(poemChank => poemChank.PoemId).HasColumnName("poem_id");
+            entity.Property(poemChank => poemChank.ChunkNumber).HasColumnName("chunk_number");
+            entity.Property(poemChank => poemChank.Text).HasColumnName("text");
+            entity.Property(poemChank => poemChank.Embedding).HasColumnName("embedding").HasColumnType("vector(384)");
+            entity
+                .HasIndex(poemChank => poemChank.Embedding, "poem_chunks_embedding_idx")
+                .HasMethod("hnsw")
+                .HasOperators("vector_cosine_ops");
+            entity
+                .HasOne(poemChank => poemChank.Poem)
+                .WithMany()
+                .HasForeignKey(e => e.PoemId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("poem_chunks_poems_fk");
         });
 
         OnModelCreatingPartial(modelBuilder);

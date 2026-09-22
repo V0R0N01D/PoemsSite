@@ -13,4 +13,7 @@ public interface IPoemService
 
     Task<Result<PoemFullDto>> GetPoemByIdAsync(int id,
         CancellationToken cancellationToken = default);
+
+    Task<Result<SearchResultDto>> VectorSearchPoemsAsync(string query,
+        CancellationToken cancellationToken = default);
 }

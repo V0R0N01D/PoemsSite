@@ -23,6 +23,12 @@ public class PoemsLoader(
             var postgres = scope.ServiceProvider.GetRequiredKeyedService<IDataLoadingService>("postgres");
             await postgres.LoadDataAsync(stoppingToken);
 
+            if (configuration.GetValue<bool>("VectorSearchEnabled"))
+            {
+                var vector = scope.ServiceProvider.GetRequiredKeyedService<IDataLoadingService>("vector");
+                await vector.LoadDataAsync(stoppingToken);
+            }
+
             if (configuration.GetValue<bool>("ElasticsearchEnabled"))
             {
                 var elastic = scope.ServiceProvider.GetRequiredKeyedService<IDataLoadingService>("elastic");

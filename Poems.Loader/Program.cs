@@ -11,6 +11,8 @@ using Poems.Loader.Services.Interfaces;
 using Poems.Loader.Models;
 using Poems.Loader.Services;
 using Poems.Loader.HostedServices;
+using Pgvector.EntityFrameworkCore;
+using Poems.Common.Embeddings;
 
 namespace Poems.Loader;
 
@@ -30,7 +32,7 @@ internal class Program
 
         builder.Services.AddDbContext<PoemsContext>(options =>
             options.UseNpgsql(builder.Configuration.GetConnectionString("PoemsDatabase"),
-                postgres => postgres.MigrationsAssembly(typeof(Program).Assembly.FullName)));
+                postgres => postgres.UseVector().MigrationsAssembly(typeof(Program).Assembly.FullName)));
 
         builder.Services.AddScoped<IFileInfoProvider, ConfigurationFileInfoProvider>(provider =>
             new ConfigurationFileInfoProvider(provider.GetRequiredService<IConfiguration>()));
@@ -40,6 +42,16 @@ internal class Program
         builder.Services.AddKeyedScoped<IDataLoadingService, PostgresDataLoadingService>("postgres");
 
         #endregion
+
+        if (builder.Configuration.GetValue<bool>("VectorSearchEnabled"))
+        {
+            builder.Services.AddPoemEmbeddings(builder.Configuration);
+            builder.Services.AddKeyedScoped<IDataLoadingService, VectorDataLoadingService>("vector");
+        }
+        else
+        {
+            builder.Services.AddKeyedScoped<IDataLoadingService>("vector", (_, _) => null!);
+        }
 
         #region Elasticsearch
 
